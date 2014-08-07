@@ -1,0 +1,3 @@
+[submodule "src/xmlrcsd/hiredis"]
+	path = src/xmlrcsd/hiredis
+	url = http://github.com/redis/hiredis
