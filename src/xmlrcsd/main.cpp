@@ -9,10 +9,46 @@
 //GNU General Public License for more details.
 
 #include <iostream>
+#include <string>
+#include <stdexcept>
+#include "configuration.hpp"
+#include "hiredis/hiredis.h"
+
+void Log(std::string text)
+{
+    std::cout << text << std::endl;
+}
+
+redisContext *Redis_Connect()
+{
+    struct timeval timeout = { 1, 500000 };
+    redisContext * redis_context = redisConnectWithTimeout(redis_host.c_str(), (int)redis_port, timeout);
+    if (!redis_context)
+    {
+        throw std::runtime_error("Redis connection returned NULL");
+    }
+    else if (redis_context->err)
+    {
+        throw std::runtime_error(std::string("Error while connecting to redis: ") + redis_context->errstr);
+    }
+    return redis_context;
+}
 
 int main(int argc, char *argv[])
 {
+    try
+    {
+        Log(std::string("Starting up XMLRCS version ") + version);
+        // we need to init redis now
+        redisContext *redis_context = Redis_Connect();
 
-    return 0;
+        // delete redis object
+        redisFree(redis_context);
+        return 0;
+    } catch (std::exception exception)
+    {
+        Log(std::string("FATAL ERROR: ") + exception.what());
+    }
+    return 2;
 }
 
