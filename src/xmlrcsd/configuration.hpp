@@ -10,7 +10,18 @@
 
 #include <string>
 
-const std::string version = "1.0.0";
-std::string  redis_host = "localhost";
-unsigned int redis_port = 6379;
-std::string  redis_pref = "";
+class Configuration
+{
+    public:
+        static const std::string version;
+        static bool         daemon;
+        static std::string  redis_host;
+        static unsigned int redis_port;
+        static std::string  redis_pref;
+};
+
+const std::string Configuration::version = "1.0.0";
+bool         Configuration::daemon = false;
+std::string  Configuration::redis_host = "localhost";
+unsigned int Configuration::redis_port = 6379;
+std::string  Configuration::redis_pref = "";

@@ -8,9 +8,19 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#include <vector>
+#include <pthread.h>
+#include "client.hpp"
+
 class Server
 {
     public:
         Server();
+        bool IsListening();
+        void Listen();
         int Port;
+    private:
+        bool open;
+        int ListenerFd;
+        std::vector<Client*> clients;
 };

@@ -8,7 +8,18 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#include <pthread.h>
+#include <string>
+
 class Client
 {
-
+    public:
+        Client(int fd);
+        void Launch();
+        std::string ReadLine();
+    private:
+        static void *main(void *dummyPt);
+        bool isConnected;
+        pthread_t thread;
+        int Socket;
 };

@@ -8,9 +8,60 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#include <stdexcept>
+#include <sys/socket.h>
+#include <iostream>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #include "server.hpp"
 
 Server::Server()
 {
-    this.Port = 8822;
+    this->Port = 8822;
+    this->ListenerFd = 0;
+    this->open = false;
+}
+
+bool Server::IsListening()
+{
+    return this->open;
+}
+
+void Server::Listen()
+{
+    if (this->IsListening())
+        throw std::runtime_error("This listener is already open");
+    this->open = true;
+
+    this->ListenerFd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (this->ListenerFd < 0)
+        throw std::runtime_error("Unable to create a socket for listener");
+
+    sockaddr_in svrAdd, clntAdd;
+    svrAdd.sin_addr.s_addr = INADDR_ANY;
+    svrAdd.sin_family = AF_INET;
+    svrAdd.sin_port = htons(this->Port);
+    //bind socket
+    if (bind(this->ListenerFd, (sockaddr *)&svrAdd, sizeof(svrAdd)) < 0)
+        throw std::runtime_error("Unable to bind socket");
+    listen(this->ListenerFd, 5);
+    socklen_t len = sizeof(clntAdd);
+    while(this->IsListening())
+    {
+        int connFd = accept(this->ListenerFd, (struct sockaddr *)&clntAdd, &len);
+        if (connFd < 0)
+        {
+            std::cerr << "Cannot accept connection" << std::endl;
+            continue;
+        }
+        else
+        {
+            std::cout << "Incoming connection successful" << std::endl;
+        }
+        Client *client = new Client(connFd);
+        this->clients.push_back(client);
+        client->Launch();
+    }
 }
