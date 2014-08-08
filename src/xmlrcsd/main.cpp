@@ -18,6 +18,8 @@
 #include "server.hpp"
 #include "hiredis/hiredis.h"
 
+#define UNUSED(x) (void)x
+
 bool IsRunning = true;
 
 void Log(std::string text)
@@ -49,6 +51,7 @@ redisContext *Redis_Connect()
 
 void *Listen(void *threadid)
 {
+    UNUSED(threadid);
     try
     {
         // open a listener
@@ -60,6 +63,7 @@ void *Listen(void *threadid)
         Log(std::string("FATAL ERROR: ") + exception.what());
     }
     IsRunning = false;
+    return NULL;
 }
 
 int main(int argc, char *argv[])

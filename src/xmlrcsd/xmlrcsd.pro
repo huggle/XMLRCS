@@ -6,7 +6,8 @@ SOURCES += \
     hiredis/dict.c \
     hiredis/hiredis.c \
     hiredis/net.c \
-    hiredis/sds.c
+    hiredis/sds.c \
+    configuration.cpp
 
 HEADERS += \
     client.hpp \

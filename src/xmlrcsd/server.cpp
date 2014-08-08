@@ -61,7 +61,7 @@ void Server::Listen()
             std::cout << "Incoming connection successful" << std::endl;
         }
         Client *client = new Client(connFd);
-        this->clients.push_back(client);
+        Client::clients.push_back(client);
         client->Launch();
     }
 }

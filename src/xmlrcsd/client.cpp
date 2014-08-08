@@ -8,11 +8,15 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
 #include <pthread.h>
+#include "configuration.hpp"
 #include "client.hpp"
+
+std::vector<Client*> Client::clients;
 
 Client::Client(int fd)
 {
@@ -20,9 +24,26 @@ Client::Client(int fd)
     this->Socket = fd;
 }
 
+Client::~Client()
+{
+    //delete this
+    std::vector<Client*>::iterator position = std::find(clients.begin(), clients.end(), this);
+    if (position != clients.end())
+        clients.erase(position);
+}
+
 void Client::Launch()
 {
     pthread_create(&this->thread, NULL, this->main, this);
+}
+
+void Client::SendLine(std::string line)
+{
+    if (!this->isConnected)
+        return;
+    if (line[line.length() - 1] != '\n')
+        line += "\r\n";
+    write(this->Socket, line.c_str(), line.length());
 }
 
 std::string Client::ReadLine()
@@ -36,6 +57,11 @@ std::string Client::ReadLine()
         int i = 0;
         while (i < 10)
         {
+            if (buffer[i] == '\r')
+            {
+                i++;
+                continue;
+            }
             if (buffer[i] == '\0')
             {
                 // end of string reached
@@ -47,6 +73,7 @@ std::string Client::ReadLine()
                 return line;
             }
             line += buffer[i];
+            i++;
         }
     }
     return line;
@@ -58,6 +85,15 @@ void *Client::main(void *self)
     while (_this->isConnected)
     {
         std::string line = _this->ReadLine();
-
+        if (line == "exit")
+        {
+            close(_this->Socket);
+            goto exit;
+        }
+        if (line == "version")
+            _this->SendLine(Configuration::version);
     }
+    exit:
+        delete _this;
+        return NULL;
 }

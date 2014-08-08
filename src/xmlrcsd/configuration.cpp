@@ -8,23 +8,10 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
-#include <vector>
-#include <pthread.h>
-#include <string>
+#include "configuration.hpp"
 
-class Client
-{
-    public:
-        static std::vector<Client*> clients;
-
-        Client(int fd);
-        ~Client();
-        void Launch();
-        void SendLine(std::string line);
-        std::string ReadLine();
-    private:
-        static void *main(void *dummyPt);
-        bool isConnected;
-        pthread_t thread;
-        int Socket;
-};
+const std::string Configuration::version = "1.0.0";
+bool         Configuration::daemon = false;
+std::string  Configuration::redis_host = "localhost";
+unsigned int Configuration::redis_port = 6379;
+std::string  Configuration::redis_pref = "";
