@@ -3,7 +3,7 @@ XMLRCS
 
 Recent changes xml stream for mediawiki
 
-This is a simple XML provider for recent changes for MediaWiki. It basically takes the extremely complicated WebSocket IO JSON provider that is now supported by WMF and push the data to redis in XML format. The daemon (xmlrcsd) is then listening on port 8822 for any incoming connections and allow them to retrieve the stream in a simple way.
+This is a simple XML provider for recent changes for MediaWiki. It basically takes the extremely complicated WebSocket IO JSON provider that is now supported by WMF and push the data to redis in XML format. The daemon (xmlrcsd) is then listening on port 8822 for any incoming connections and allow them to retrieve the stream in a simple way that can be easily parsed in any programming language with no need to support WebSockets or JSON.
 
 Protocol
 =========
@@ -17,8 +17,22 @@ subscribe to a wiki, for example:
 
 S en.wikipedia.org
 
-you can also use * to subscribe to all wikis
+you can also use * to subscribe to all wikis.
+
+Response: OK on success or ERROR with reason on error
 ## stat
 Display various system information useful for debugging
 ## version
 Display version of daemon
+
+Output
+======
+
+In case that you are subscribed to a wiki and there is a change, daemon will send you a 1 line of text in this format:
+url|xml
+
+for example:
+```
+en.wikipedia.org|<edit wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page" diffsize="543652">summary</edit>
+en.wikipedia.org|<newpage wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page">summary</newpage>
+```
