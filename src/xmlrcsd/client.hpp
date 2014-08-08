@@ -12,6 +12,9 @@
 #include <pthread.h>
 #include <string>
 
+#define EALREADYEXIST 1
+#define EINVALID      2
+
 class Client
 {
     public:
@@ -22,6 +25,8 @@ class Client
         void Launch();
         void SendLine(std::string line);
         std::string ReadLine();
+        int Subscribe(std::string wiki);
+        std::vector<std::string> Subscriptions;
     private:
         static void *main(void *dummyPt);
         bool isConnected;

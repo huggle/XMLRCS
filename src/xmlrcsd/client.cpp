@@ -79,6 +79,19 @@ std::string Client::ReadLine()
     return line;
 }
 
+int Client::Subscribe(std::string wiki)
+{
+    if (wiki.length() == 0)
+        return EINVALID;
+    std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
+                                                            this->Subscriptions.end(),
+                                                            wiki);
+    if (position != this->Subscriptions.end())
+        return EALREADYEXIST;
+    this->Subscriptions.push_back(wiki);
+    return 0;
+}
+
 void *Client::main(void *self)
 {
     Client *_this = (Client*)self;
@@ -92,6 +105,29 @@ void *Client::main(void *self)
         }
         if (line == "version")
             _this->SendLine(Configuration::version);
+        if (line[0] == 'S' && line[1] == ' ')
+        {
+            // user wants to subscribe to a wiki
+            std::string wiki = line.substr(2);
+            while (wiki[0] == ' ')
+                wiki = wiki.substr(1);
+            int result = _this->Subscribe(wiki);
+            if (result)
+            {
+                switch(result)
+                {
+                    case EINVALID:
+                        _this->SendLine("ERROR: This is not a valid wiki name");
+                        break;
+                    case EALREADYEXIST:
+                        _this->SendLine("ERROR: You are already subscribed to this one");
+                        break;
+                }
+            } else
+            {
+                _this->SendLine("OK");
+            }
+        }
     }
     exit:
         delete _this;
