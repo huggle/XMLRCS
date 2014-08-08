@@ -9,6 +9,7 @@
 //GNU General Public License for more details.
 
 #include <string>
+#include <time.h>
 
 class Configuration
 {
@@ -18,4 +19,5 @@ class Configuration
         static std::string  redis_host;
         static unsigned int redis_port;
         static std::string  redis_pref;
+        static time_t       startup_time;
 };

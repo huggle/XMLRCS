@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 #include <syslog.h>
 #include "configuration.hpp"
 #include "server.hpp"
@@ -84,6 +85,7 @@ int main(int argc, char *argv[])
                 return 0;
         }
         Log(std::string("Starting up XMLRCS version ") + Configuration::version);
+        Configuration::startup_time = time(0);
         pthread_t listener;
         pthread_create(&listener, NULL, Listen, (void*)NULL);
         // we need to init redis now

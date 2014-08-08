@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include "configuration.hpp"
 #include "client.hpp"
+#include "generic.hpp"
 
 std::vector<Client*> Client::clients;
 
@@ -92,6 +93,22 @@ int Client::Subscribe(std::string wiki)
     return 0;
 }
 
+// Get current date/time, format is YYYY-MM-DD.HH:mm:ss
+const std::string retrieve_uptime()
+{
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&Configuration::startup_time);
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+
+    time_t diff = time(0) - Configuration::startup_time;
+    std::string up(buf);
+    up += " (";
+    up += SSTR(diff);
+    up += " seconds)";
+    return up;
+}
+
 void *Client::main(void *self)
 {
     Client *_this = (Client*)self;
@@ -105,7 +122,7 @@ void *Client::main(void *self)
         }
         if (line == "version")
             _this->SendLine(Configuration::version);
-        if (line[0] == 'S' && line[1] == ' ')
+        else if (line[0] == 'S' && line[1] == ' ')
         {
             // user wants to subscribe to a wiki
             std::string wiki = line.substr(2);
@@ -127,6 +144,12 @@ void *Client::main(void *self)
             {
                 _this->SendLine("OK");
             }
+        }
+        else if (line == "stat")
+        {
+            // Write some statistics to user
+            std::string uptime = std::string("uptime since: ") + retrieve_uptime();
+            _this->SendLine(uptime);
         }
     }
     exit:

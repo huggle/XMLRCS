@@ -7,7 +7,8 @@ SOURCES += \
     hiredis/hiredis.c \
     hiredis/net.c \
     hiredis/sds.c \
-    configuration.cpp
+    configuration.cpp \
+    generic.cpp
 
 HEADERS += \
     client.hpp \
@@ -18,4 +19,5 @@ HEADERS += \
     hiredis/fmacros.h \
     hiredis/hiredis.h \
     hiredis/net.h \
-    hiredis/sds.h
+    hiredis/sds.h \
+    generic.hpp

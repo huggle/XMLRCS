@@ -11,7 +11,9 @@
 #include <stdexcept>
 #include <sys/socket.h>
 #include <iostream>
+#include <cstring>
 #include <sys/types.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include "server.hpp"
@@ -45,7 +47,7 @@ void Server::Listen()
     svrAdd.sin_port = htons(this->Port);
     //bind socket
     if (bind(this->ListenerFd, (sockaddr *)&svrAdd, sizeof(svrAdd)) < 0)
-        throw std::runtime_error("Unable to bind socket");
+        throw std::runtime_error(std::string("Unable to bind socket: ") + strerror(errno));
     listen(this->ListenerFd, 5);
     socklen_t len = sizeof(clntAdd);
     while(this->IsListening())

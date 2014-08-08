@@ -15,3 +15,4 @@ bool         Configuration::daemon = false;
 std::string  Configuration::redis_host = "localhost";
 unsigned int Configuration::redis_port = 6379;
 std::string  Configuration::redis_pref = "";
+time_t       Configuration::startup_time;
