@@ -36,3 +36,12 @@ for example:
 en.wikipedia.org|<edit wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page" diffsize="543652">summary</edit>
 en.wikipedia.org|<newpage wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page">summary</newpage>
 ```
+
+Technical details
+=================
+
+This XML system contains of 3 components:
+
+* Convertor written in python which connects to WMF feed and push data to redis (pretty simple thing)
+* Redis server
+* Daemon written in C++ which handles the incoming connections (high speed, resource effective)
