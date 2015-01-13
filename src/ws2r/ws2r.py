@@ -25,8 +25,10 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         length_n=0
         length_o=0
         minor=False
+        old = ''
         if ('revision' in change):
             rev_id = 'revid="' + str(change['revision']['new']) + '" '
+            old = 'oldid="' + str(change['revision']['old']) + '" '
         if ('patrolled' in change):
             patrolled = change['patrolled']
         if ('minor' in change):
@@ -36,7 +38,7 @@ class WikiNamespace(socketIO_client.BaseNamespace):
             length_o = change['length']['old']
         result = '<edit wiki="' + change['wiki'] + '" '
         result += 'server_name="' + change['server_name'] + '" ' 
-        result += rev_id
+        result += rev_id + old
         result += 'summary=' + quoteattr(change['comment']) + ' '
         result += 'title=' +  quoteattr(change['title']) + ' '
         result += 'namespace="' + str(change['namespace']) + '" '
