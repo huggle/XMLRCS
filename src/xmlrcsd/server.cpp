@@ -16,11 +16,12 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "configuration.hpp"
 #include "server.hpp"
 
 Server::Server()
 {
-    this->Port = 8822;
+    this->Port = Configuration::port;
     this->ListenerFd = 0;
     this->open = false;
 }
@@ -57,10 +58,6 @@ void Server::Listen()
         {
             std::cerr << "Cannot accept connection" << std::endl;
             continue;
-        }
-        else
-        {
-            std::cout << "Incoming connection successful" << std::endl;
         }
         Client *client = new Client(connFd);
         Client::clients.push_back(client);

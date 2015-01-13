@@ -13,6 +13,8 @@
 #include <fstream>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include "configuration.hpp"
 #include "client.hpp"
 #include "generic.hpp"
@@ -23,6 +25,14 @@ Client::Client(int fd)
 {
     this->isConnected = true;
     this->Socket = fd;
+    struct sockaddr_storage addr;
+    char ipstr[200];
+    socklen_t len = sizeof(addr);
+    struct sockaddr_in *s = (struct sockaddr_in *) &addr;
+    getsockname(fd, (struct sockaddr *) &addr, &len);
+    inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
+    this->IP = std::string(ipstr);
+    Generic::Log("Incoming connection from " + this->IP);
 }
 
 Client::~Client()
@@ -80,16 +90,34 @@ std::string Client::ReadLine()
     return line;
 }
 
+bool Client::IsSubscribed(std::string site)
+{
+    std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
+                                                            this->Subscriptions.end(),
+                                                            site);
+    return (position != this->Subscriptions.end());
+}
+
 int Client::Subscribe(std::string wiki)
+{
+    if (wiki.length() == 0)
+        return EINVALID;
+    if (this->IsSubscribed(wiki))
+        return EALREADYEXIST;
+    this->Subscriptions.push_back(wiki);
+    return 0;
+}
+
+int Client::Unsubscribe(std::string wiki)
 {
     if (wiki.length() == 0)
         return EINVALID;
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
                                                             this->Subscriptions.end(),
                                                             wiki);
-    if (position != this->Subscriptions.end())
-        return EALREADYEXIST;
-    this->Subscriptions.push_back(wiki);
+    if (position == this->Subscriptions.end())
+        return ENOTEXIST;
+    this->Subscriptions.erase(position);
     return 0;
 }
 
@@ -145,6 +173,29 @@ void *Client::main(void *self)
                 _this->SendLine("OK");
             }
         }
+        else if (line[0] == 'D' && line[1] == ' ')
+        {
+            // user wants to unsubscribe to a wiki
+            std::string wiki = line.substr(2);
+            while (wiki[0] == ' ')
+                wiki = wiki.substr(1);
+            int result = _this->Unsubscribe(wiki);
+            if (result)
+            {
+                switch(result)
+                {
+                    case EINVALID:
+                        _this->SendLine("ERROR: This is not a valid wiki name");
+                        break;
+                    case ENOTEXIST:
+                        _this->SendLine("ERROR: You are not subscribed to this one");
+                        break;
+                }
+            } else
+            {
+                _this->SendLine("OK");
+            }
+        }
         else if (line == "stat")
         {
             // Write some statistics to user
@@ -153,6 +204,7 @@ void *Client::main(void *self)
         }
     }
     exit:
+        Generic::Log("Connection closed: " + _this->IP);
         delete _this;
         return NULL;
 }

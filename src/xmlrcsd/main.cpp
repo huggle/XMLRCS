@@ -14,22 +14,17 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
-#include <syslog.h>
 #include "configuration.hpp"
+#include "streamitem.hpp"
+#include "generic.hpp"
 #include "server.hpp"
 #include "hiredis/hiredis.h"
 
 #define UNUSED(x) (void)x
 
-bool IsRunning = true;
+using namespace Generic;
 
-void Log(std::string text)
-{
-    if (!Configuration::daemon)
-        std::cout << text << std::endl;
-    else
-        syslog(LOG_INFO, text.c_str());
-}
+bool IsRunning = true;
 
 redisContext *Redis_Connect()
 {
@@ -97,8 +92,17 @@ int main(int argc, char *argv[])
             {
                 redis_context = Redis_Connect();
                 Log("Successfuly connected to redis server");
+                redisReply *reply;
                 while (IsRunning)
-                    usleep(100000);
+                {
+                    // get a rc message from redis and store it into internal buffer for later processing
+                    reply = (redisReply*)redisCommand(redis_context, "RPOP rc");
+                    if (reply->len > 0)
+                        StreamItem::ProcessItem(std::string(reply->str));
+                    else
+                        usleep(100000);
+                    freeReplyObject(reply);
+                }
                 break;
             } catch (std::runtime_error exception)
             {

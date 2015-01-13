@@ -14,6 +14,7 @@
 
 #define EALREADYEXIST 1
 #define EINVALID      2
+#define ENOTEXIST     4
 
 class Client
 {
@@ -25,7 +26,10 @@ class Client
         void Launch();
         void SendLine(std::string line);
         std::string ReadLine();
+        bool IsSubscribed(std::string site);
         int Subscribe(std::string wiki);
+        int Unsubscribe(std::string wiki);
+        std::string IP;
         std::vector<std::string> Subscriptions;
     private:
         static void *main(void *dummyPt);

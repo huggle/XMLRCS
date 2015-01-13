@@ -16,6 +16,7 @@ class Configuration
     public:
         static const std::string version;
         static bool         daemon;
+        static int          port;
         static std::string  redis_host;
         static unsigned int redis_port;
         static std::string  redis_pref;
