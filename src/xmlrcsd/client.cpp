@@ -196,6 +196,11 @@ void *Client::main(void *self)
                 _this->SendLine("OK");
             }
         }
+        else if (line == "ping")
+        {
+            // reply
+            _this->SendLine("pong");
+        }
         else if (line == "stat")
         {
             // Write some statistics to user
