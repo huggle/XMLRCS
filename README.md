@@ -33,7 +33,7 @@ url|xml
 
 for example:
 ```
-en.wikipedia.org|<edit wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page" diffsize="543652">summary</edit>
+en.wikipedia.org|<edit wiki="enwiki" server_name="en.wikipedia.org" revid="642306515" oldid="642305956" summary="" title="Thadiya (Jodhpur)" namespace="0" user="Teju Suthar" bot="False" patrolled="False" minor="True" length_new="551" length_old="547" timestamp="1421155443"></edit>
 en.wikipedia.org|<newpage wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page">summary</newpage>
 ```
 
