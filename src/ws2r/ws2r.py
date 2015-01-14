@@ -46,6 +46,7 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         result += 'bot="' + str(change['bot']) + '" '
         result += 'patrolled="' + str(patrolled) + '" '
         result += 'minor="' + str(minor) + '" '
+        result += 'type=' + quoteattr(change['type']) + ' '
         result += 'length_new="' + str(length_n) + '" '
         result += 'length_old="' + str(length_o) + '" '
         result += 'timestamp="' + str(change['timestamp']) + '">'
