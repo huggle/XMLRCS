@@ -47,7 +47,8 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         result += '</edit>'
         insert_to_redis(change['server_name'], result)
 #        print '%(user)s edited %(title)s' % change
- 
+    def on_reconnect(self, *args):
+        self.emit('subscribe', '*') 
     def on_connect(self):
         self.emit('subscribe', '*')
  
