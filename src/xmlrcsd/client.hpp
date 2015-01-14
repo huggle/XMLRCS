@@ -15,11 +15,15 @@
 #define EALREADYEXIST 1
 #define EINVALID      2
 #define ENOTEXIST     4
+#define ETOOMANYSUBS  8
+#define MAX_SUBSCRIPTIONS 800
+#define MAX_SUBSCR_SIZE 200
 
 class Client
 {
     public:
         static std::vector<Client*> clients;
+        static pthread_mutex_t clients_lock;
 
         Client(int fd);
         ~Client();

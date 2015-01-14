@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <unistd.h>
 #include "configuration.hpp"
 #include "server.hpp"
@@ -60,7 +61,9 @@ void Server::Listen()
             continue;
         }
         Client *client = new Client(connFd);
+        pthread_mutex_lock(&Client::clients_lock);
         Client::clients.push_back(client);
+        pthread_mutex_unlock(&Client::clients_lock);
         client->Launch();
     }
 }

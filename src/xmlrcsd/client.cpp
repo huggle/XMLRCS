@@ -20,6 +20,7 @@
 #include "generic.hpp"
 
 std::vector<Client*> Client::clients;
+pthread_mutex_t Client::clients_lock;
 
 Client::Client(int fd)
 {
@@ -37,10 +38,12 @@ Client::Client(int fd)
 
 Client::~Client()
 {
+    pthread_mutex_lock(&Client::clients_lock);
     //delete this
     std::vector<Client*>::iterator position = std::find(clients.begin(), clients.end(), this);
     if (position != clients.end())
         clients.erase(position);
+    pthread_mutex_unlock(&Client::clients_lock);
 }
 
 void Client::Launch()
@@ -90,6 +93,19 @@ std::string Client::ReadLine()
     return line;
 }
 
+static std::string Sanitize(std::string name)
+{
+    if (name.size() == 0)
+        return name;
+    char last = name[name.size() - 1];
+    while (name.size() > 0 && (last == '\n' || last == '\r'))
+    {
+        // we remove the last character because it's causing problems
+        name = name.substr(0, name.size() - 1);
+    }
+    return name;
+}
+
 bool Client::IsSubscribed(std::string site)
 {
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
@@ -100,7 +116,10 @@ bool Client::IsSubscribed(std::string site)
 
 int Client::Subscribe(std::string wiki)
 {
-    if (wiki.length() == 0)
+    wiki = Sanitize(wiki);
+    if (this->Subscriptions.size() > MAX_SUBSCRIPTIONS)
+        return ETOOMANYSUBS;
+    if (wiki.length() == 0 || wiki.length() > MAX_SUBSCR_SIZE)
         return EINVALID;
     if (this->IsSubscribed(wiki))
         return EALREADYEXIST;
@@ -110,6 +129,7 @@ int Client::Subscribe(std::string wiki)
 
 int Client::Unsubscribe(std::string wiki)
 {
+    wiki = Sanitize(wiki);
     if (wiki.length() == 0)
         return EINVALID;
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
@@ -166,6 +186,9 @@ void *Client::main(void *self)
                         break;
                     case EALREADYEXIST:
                         _this->SendLine("ERROR: You are already subscribed to this one");
+                        break;
+                    case ETOOMANYSUBS:
+                        _this->SendLine("ERROR: You subscribed to too many wikis now");
                         break;
                 }
             } else

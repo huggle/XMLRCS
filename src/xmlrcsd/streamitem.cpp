@@ -8,6 +8,7 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#include <pthread.h>
 #include "streamitem.hpp"
 #include "client.hpp"
 #include "generic.hpp"
@@ -22,6 +23,7 @@ void StreamItem::ProcessItem(std::string text)
     }
     std::string site = text.substr(0, splitter);
     std::string xml = text.substr(splitter + 1);
+    pthread_mutex_lock(&Client::clients_lock);
     for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
     {
         if (Client::clients[i]->IsSubscribed(site))
@@ -29,6 +31,7 @@ void StreamItem::ProcessItem(std::string text)
             Client::clients[i]->SendLine(text);
         }
     }
+    pthread_mutex_unlock(&Client::clients_lock);
 }
 
 StreamItem::StreamItem()
