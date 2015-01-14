@@ -5,12 +5,6 @@ import json
 import redis
 from xml.sax.saxutils import quoteattr
 
-#DEBUG:socketIO_client.transports:[packet received] 5::/rc:{"args":[{"comment":"","wiki":"metawiki","server_name":"meta.wikimedia.beta.wmflabs.org","title":"Huggle/Config","timestamp":1407505120,"server_script_path":"/w","namespace":0,"server_url":"http://meta.wikimedia.beta.wmflabs.org","length":{"new":1232,"old":1226},"user":"90.183.23.27","bot":false,"pat
-#olled":false,"type":"edit","id":1912,"minor":false,"revision":{"new":1136,"old":1107}}],"name":"change"} 
-#90.183.23.27 edited Huggle/Config
-
-
-#logging.basicConfig(level='DEBUG')
 rs = redis.Redis('localhost') 
 
 def insert_to_redis(wiki, xml):

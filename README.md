@@ -36,8 +36,26 @@ url|xml
 for example:
 ```
 en.wikipedia.org|<edit wiki="enwiki" server_name="en.wikipedia.org" revid="642306515" oldid="642305956" summary="" title="Thadiya (Jodhpur)" namespace="0" user="Teju Suthar" bot="False" patrolled="False" minor="True" length_new="551" length_old="547" timestamp="1421155443"></edit>
-en.wikipedia.org|<newpage wiki="en.wikipedia.org" timestamp="4325235" user="Cookie" page="Main_page">summary</newpage>
 ```
+
+Known standard attributes of each edit node:
+* wiki: name of a wiki as a shortcut (enwiki)
+* server_name: fqdn of server (en.wikipedia.org)
+* revid: revision id (54635262)
+* oldid: previous revision id (5635323)
+* summary: summary of edit
+* title: name of page
+* user: name of user
+* bot
+* patrolled
+* minor
+* type: type of edit (edit is regular edit, new is a newpage)
+* length_new: size of new edit
+* length_old: size of old edit
+* timestamp
+
+Most of these attributes are present in every node, but they are not guaranteed to be there, so you should verify if they are present before reading them.
+
 
 Technical details
 =================
