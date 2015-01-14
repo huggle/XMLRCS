@@ -60,13 +60,20 @@ void Client::SendLine(std::string line)
     write(this->Socket, line.c_str(), line.length());
 }
 
-std::string Client::ReadLine()
+std::string Client::ReadLine(bool *error)
 {
     std::string line;
+    *error = false;
     while (true)
     {
         char buffer[10];
         size_t bytes = read(this->Socket, buffer, 10);
+        if (bytes < 0)
+        {
+            // there was some error
+            *error = true;
+            return line;
+        }
         if (!bytes)
         {
             // there is nothing in a buffer yet, so we sleep for a short time and then try again so that CPU is not exhausted
@@ -166,8 +173,9 @@ void *Client::main(void *self)
     Client *_this = (Client*)self;
     while (_this->isConnected)
     {
-        std::string line = _this->ReadLine();
-        if (line == "exit")
+        bool er;
+        std::string line = _this->ReadLine(&er);
+        if (er || line == "exit")
         {
             close(_this->Socket);
             goto exit;

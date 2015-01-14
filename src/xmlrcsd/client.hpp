@@ -29,7 +29,7 @@ class Client
         ~Client();
         void Launch();
         void SendLine(std::string line);
-        std::string ReadLine();
+        std::string ReadLine(bool *error);
         bool IsSubscribed(std::string site);
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
