@@ -5,6 +5,8 @@ Recent changes xml stream for mediawiki
 
 This is a simple XML provider for recent changes for MediaWiki. It basically takes the extremely complicated WebSocket IO JSON provider that is now supported by WMF and push the data to redis in XML format. The daemon (xmlrcsd) is then listening on port 8822 for any incoming connections and allow them to retrieve the stream in a simple way that can be easily parsed in any programming language with no need to support WebSockets or JSON.
 
+There is working instance at huggle-rc.wmflabs.org which you can try yourself
+
 Protocol
 =========
 
