@@ -63,13 +63,18 @@ void Client::SendLine(std::string line)
 std::string Client::ReadLine()
 {
     std::string line;
-    bool reading = true;
-    while(reading)
+    while (true)
     {
         char buffer[10];
-        read(this->Socket, buffer, 9);
+        size_t bytes = read(this->Socket, buffer, 10);
+        if (!bytes)
+        {
+            // there is nothing in a buffer yet, so we sleep for a short time and then try again so that CPU is not exhausted
+            usleep(2000);
+            continue;
+        }
         int i = 0;
-        while (i < 10)
+        while (i < bytes)
         {
             if (buffer[i] == '\r')
             {
@@ -83,7 +88,6 @@ std::string Client::ReadLine()
             }
             if (buffer[i] == '\n')
             {
-                reading = false;
                 return line;
             }
             line += buffer[i];
