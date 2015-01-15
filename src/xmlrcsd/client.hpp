@@ -18,6 +18,7 @@
 #define ETOOMANYSUBS  8
 #define MAX_SUBSCRIPTIONS 800
 #define MAX_SUBSCR_SIZE 200
+#define RESP_OK "<ok></ok>"
 
 class Client
 {

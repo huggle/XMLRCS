@@ -105,6 +105,11 @@ std::string Client::ReadLine(bool *error)
     return line;
 }
 
+static std::string mker(std::string text)
+{
+    return std::string("<error>") + text + std::string("</error>");
+}
+
 static std::string Sanitize(std::string name)
 {
     if (name.size() == 0)
@@ -216,18 +221,18 @@ void *Client::main(void *self)
                 switch(result)
                 {
                     case EINVALID:
-                        _this->SendLine("ERROR: This is not a valid wiki name");
+                        _this->SendLine(mker("This is not a valid wiki name"));
                         break;
                     case EALREADYEXIST:
-                        _this->SendLine("ERROR: You are already subscribed to this one");
+                        _this->SendLine(mker("You are already subscribed to this one"));
                         break;
                     case ETOOMANYSUBS:
-                        _this->SendLine("ERROR: You subscribed to too many wikis now");
+                        _this->SendLine(mker("You subscribed to too many wikis now"));
                         break;
                 }
             } else
             {
-                _this->SendLine("OK");
+                _this->SendLine(RESP_OK);
             }
         }
         else if (line[0] == 'D' && line[1] == ' ')
@@ -242,15 +247,15 @@ void *Client::main(void *self)
                 switch(result)
                 {
                     case EINVALID:
-                        _this->SendLine("ERROR: This is not a valid wiki name");
+                        _this->SendLine(mker("This is not a valid wiki name"));
                         break;
                     case ENOTEXIST:
-                        _this->SendLine("ERROR: You are not subscribed to this one");
+                        _this->SendLine(mker("You are not subscribed to this one"));
                         break;
                 }
             } else
             {
-                _this->SendLine("OK");
+                _this->SendLine(RESP_OK);
             }
         }
         else if (line == "clear")
@@ -258,17 +263,17 @@ void *Client::main(void *self)
             pthread_mutex_lock(&_this->subscriptions_lock);
             _this->Subscriptions.clear();
             pthread_mutex_unlock(&_this->subscriptions_lock);
-            _this->SendLine("OK");
+            _this->SendLine(RESP_OK);
         }
         else if (line == "ping")
         {
             // reply
-            _this->SendLine("pong");
+            _this->SendLine("<pong></pong>");
         }
         else if (line == "stat")
         {
             // Write some statistics to user
-            std::string uptime = std::string("uptime since: ") + retrieve_uptime();
+            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + "</stat>";
             _this->SendLine(uptime);
         }
     }
