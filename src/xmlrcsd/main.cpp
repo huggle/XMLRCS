@@ -108,8 +108,9 @@ int main(int argc, char *argv[])
             if (pid > 0)
                 return 0;
         }
-        Log(std::string("Starting up XMLRCS version ") + Configuration::version);
+        Configuration::last_io = time(0);
         Configuration::startup_time = time(0);
+        Log(std::string("Starting up XMLRCS version ") + Configuration::version);
         pthread_t killer;
         pthread_create(&killer, NULL, Killer, (void*)NULL);
         pthread_t listener;
@@ -129,9 +130,25 @@ int main(int argc, char *argv[])
                     // get a rc message from redis and store it into internal buffer for later processing
                     reply = (redisReply*)redisCommand(redis_context, "RPOP rc");
                     if (reply->len > 0)
+                    {
+                        // Update last io time
+                        Configuration::last_io = time(0);
                         StreamItem::ProcessItem(std::string(reply->str));
+                    }
                     else
+                    {
+                        if (time(0) > Configuration::last_io + 12)
+                        {
+                            Configuration::last_io = time(0);
+                            pthread_mutex_lock(&Client::clients_lock);
+                            for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
+                            {
+                                Client::clients[i]->SendLine("<fatal>redis is empty for 10 seconds</fatal>");
+                            }
+                        }
+                        pthread_mutex_unlock(&Client::clients_lock);
                         usleep(100000);
+                    }
                     freeReplyObject(reply);
                 }
                 break;
