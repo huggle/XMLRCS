@@ -111,8 +111,8 @@ std::string Client::ReadLine(bool *error)
     *error = false;
     while (true)
     {
-        char buffer[200];
-        ssize_t bytes = read(this->Socket, buffer, 200);
+        char buffer[1];
+        ssize_t bytes = read(this->Socket, buffer, 1);
         if (bytes < 0)
         {
             // there was some error
@@ -125,26 +125,11 @@ std::string Client::ReadLine(bool *error)
             usleep(2000);
             continue;
         }
-        int i = 0;
-        while (i < bytes)
-        {
-            if (buffer[i] == '\r')
-            {
-                i++;
-                continue;
-            }
-            if (buffer[i] == '\0')
-            {
-                // end of string reached
-                break;
-            }
-            if (buffer[i] == '\n')
-            {
-                return line;
-            }
-            line += buffer[i];
-            i++;
-        }
+        if (buffer[0] == '\r')
+            continue;
+        if (buffer[0] == '\n')
+            return line;
+        line += buffer[0];
     }
     return line;
 }
