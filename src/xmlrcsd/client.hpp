@@ -25,6 +25,7 @@ class Client
     public:
         static std::vector<Client*> clients;
         static pthread_mutex_t clients_lock;
+        static unsigned int UsersCount;
 
         Client(int fd);
         ~Client();

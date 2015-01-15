@@ -21,10 +21,14 @@
 
 std::vector<Client*> Client::clients;
 pthread_mutex_t Client::clients_lock;
+unsigned int Client::UsersCount = 0;
 
 Client::Client(int fd)
 {
     this->SubscribedAny = false;
+    pthread_mutex_lock(&Client::clients_lock);
+    UsersCount++;
+    pthread_mutex_unlock(&Client::clients_lock);
     this->isConnected = true;
     this->Socket = fd;
     struct sockaddr_storage addr;
@@ -40,6 +44,7 @@ Client::Client(int fd)
 Client::~Client()
 {
     pthread_mutex_lock(&Client::clients_lock);
+    UsersCount--;
     //delete this
     std::vector<Client*>::iterator position = std::find(clients.begin(), clients.end(), this);
     if (position != clients.end())
@@ -271,7 +276,9 @@ void *Client::main(void *self)
         else if (line == "stat")
         {
             // Write some statistics to user
-            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + "</stat>";
+            char users[20];
+            snprintf(users, 20, "%d", UsersCount);
+            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + " users: " + std::string(users) + "</stat>";
             _this->SendLine(uptime);
         } else
         {
