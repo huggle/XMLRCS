@@ -125,12 +125,10 @@ static std::string Sanitize(std::string name)
 
 bool Client::IsSubscribed(std::string site)
 {
-    pthread_mutex_lock(&this->subscriptions_lock);
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
                                                             this->Subscriptions.end(),
                                                             site);
     bool result = (position != this->Subscriptions.end());
-    pthread_mutex_unlock(&this->subscriptions_lock);
     return result;
 }
 
