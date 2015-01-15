@@ -18,5 +18,5 @@ void Generic::Log(std::string text)
     if (!Configuration::daemon)
         std::cout << text << std::endl;
     else
-        syslog(LOG_INFO, text.c_str());
+        syslog(LOG_INFO, "%s", text.c_str());
 }
