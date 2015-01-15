@@ -275,6 +275,9 @@ void *Client::main(void *self)
             // Write some statistics to user
             std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + "</stat>";
             _this->SendLine(uptime);
+        } else
+        {
+            _this->SendLine(mker(std::string("Unknown: ") + line));
         }
     }
     exit:
