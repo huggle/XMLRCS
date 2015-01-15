@@ -49,7 +49,10 @@ Client::Client(int fd)
 {
     pthread_mutex_init(&this->OutgoingBuffer_lock, NULL);
     pthread_mutex_init(&this->subscriptions_lock, NULL);
+    this->ThreadRun2 = true;
     this->SubscribedAny = false;
+    this->killed = false;
+    this->LastPing = time(0);
     this->ThreadRun = true;
     pthread_mutex_lock(&Client::clients_lock);
     UsersCount++;
@@ -80,6 +83,8 @@ Client::~Client()
     this->isConnected = false;
     // we must wait for thread to finish, otherwise we get a segfault, or there is a high chance for that
     while (this->ThreadRun)
+        usleep(200);
+    while (this->ThreadRun2)
         usleep(200);
     this->OutgoingBuffer.clear();
 }
@@ -206,6 +211,16 @@ int Client::Unsubscribe(std::string wiki)
     return 0;
 }
 
+void Client::Kill()
+{
+    if (this->killed)
+        return;
+    this->killed = true;
+    close(this->Socket);
+    this->isConnected = false;
+    delete this;
+}
+
 // Get current date/time, format is YYYY-MM-DD.HH:mm:ss
 const std::string retrieve_uptime()
 {
@@ -234,6 +249,8 @@ void *Client::main(void *self)
             close(_this->Socket);
             goto exit;
         }
+        if (line.size())
+            _this->LastPing = time(0);
         if (line == "version")
             _this->SendLine(std::string("<versioninfo>") + Configuration::version + std::string("</versioninfo>"));
         else if (line[0] == 'S' && line[1] == ' ')
@@ -304,13 +321,19 @@ void *Client::main(void *self)
             snprintf(users, 20, "%d", UsersCount);
             std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + " users: " + std::string(users) + "</stat>";
             _this->SendLine(uptime);
-        } else
+        }
+        else if (line == "pong")
+        {
+            // dummy
+        }
+        else
         {
             _this->SendLine(mker(std::string("Unknown: ") + line));
         }
     }
     exit:
         Generic::Log("Connection closed: " + _this->IP);
-        delete _this;
+        _this->ThreadRun2 = false;
+        _this->Kill();
         return NULL;
 }

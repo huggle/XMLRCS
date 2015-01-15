@@ -8,6 +8,9 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#ifndef CONFIGURATION_HPP
+#define CONFIGURATION_HPP
+
 #include <string>
 #include <time.h>
 
@@ -22,3 +25,5 @@ class Configuration
         static std::string  redis_pref;
         static time_t       startup_time;
 };
+
+#endif

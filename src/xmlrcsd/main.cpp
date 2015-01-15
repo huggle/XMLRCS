@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <time.h>
 #include "configuration.hpp"
+#include "client.hpp"
 #include "streamitem.hpp"
 #include "generic.hpp"
 #include "server.hpp"
@@ -25,6 +26,34 @@
 using namespace Generic;
 
 bool IsRunning = true;
+
+void *Killer(void *null)
+{
+    (void)null;
+    while (IsRunning)
+    {
+            int last_check = time(NULL);
+            usleep(200000000);
+        start:
+            pthread_mutex_lock(&Client::clients_lock);
+            for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
+            {
+                if ((Client::clients[i]->LastPing + 180) < last_check)
+                {
+                    Generic::Log(std::string("Client ") + Client::clients[i]->IP + " timed out - removing them");
+                    pthread_mutex_unlock(&Client::clients_lock);
+                    Client::clients[i]->Kill();
+                    // we need to go back to start of first loop, since the whole iteration now is unsafe
+                    goto start;
+                } else
+                {
+                    Client::clients[i]->SendLine("<ping></ping>");
+                }
+            }
+            pthread_mutex_unlock(&Client::clients_lock);
+    }
+    return NULL;
+}
 
 redisContext *Redis_Connect()
 {
@@ -81,6 +110,8 @@ int main(int argc, char *argv[])
         }
         Log(std::string("Starting up XMLRCS version ") + Configuration::version);
         Configuration::startup_time = time(0);
+        pthread_t killer;
+        pthread_create(&killer, NULL, Killer, (void*)NULL);
         pthread_t listener;
         pthread_create(&listener, NULL, Listen, (void*)NULL);
         // we need to init redis now

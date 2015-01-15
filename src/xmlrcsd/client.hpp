@@ -8,6 +8,9 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
+#ifndef CLIENT_HPP
+#define CLIENT_HPP
+
 #include <vector>
 #include <pthread.h>
 #include <string>
@@ -37,6 +40,8 @@ class Client
         bool IsConnected() { return this->isConnected; }
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
+        void Kill();
+        int LastPing;
         pthread_mutex_t OutgoingBuffer_lock;
         std::vector<std::string> OutgoingBuffer;
         bool SubscribedAny;
@@ -44,11 +49,15 @@ class Client
         pthread_mutex_t subscriptions_lock;
         std::vector<std::string> Subscriptions;
         bool ThreadRun;
+        bool ThreadRun2;
     private:
         static void *main(void *dummyPt);
+        bool killed;
         //! Thread we use to deliver messages to clients so that we don't stuck whole server
         pthread_t sender;
         bool isConnected;
         pthread_t thread;
         int Socket;
 };
+
+#endif
