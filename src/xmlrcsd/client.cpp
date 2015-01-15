@@ -120,12 +120,12 @@ static std::string Sanitize(std::string name)
 
 bool Client::IsSubscribed(std::string site)
 {
-    pthread_mutex_lock(&_this->subscriptions_lock);
+    pthread_mutex_lock(&this->subscriptions_lock);
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
                                                             this->Subscriptions.end(),
                                                             site);
     bool result = (position != this->Subscriptions.end());
-    pthread_mutex_unlock(&_this->subscriptions_lock);
+    pthread_mutex_unlock(&this->subscriptions_lock);
     return result;
 }
 
@@ -145,9 +145,9 @@ int Client::Subscribe(std::string wiki)
         return EINVALID;
     if (this->IsSubscribed(wiki))
         return EALREADYEXIST;
-    pthread_mutex_lock(&_this->subscriptions_lock);
+    pthread_mutex_lock(&this->subscriptions_lock);
     this->Subscriptions.push_back(wiki);
-    pthread_mutex_unlock(&_this->subscriptions_lock);
+    pthread_mutex_unlock(&this->subscriptions_lock);
     return 0;
 }
 
@@ -163,14 +163,14 @@ int Client::Unsubscribe(std::string wiki)
     wiki = Sanitize(wiki);
     if (wiki.length() == 0)
         return EINVALID;
-    pthread_mutex_lock(&_this->subscriptions_lock);
+    pthread_mutex_lock(&this->subscriptions_lock);
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
                                                             this->Subscriptions.end(),
                                                             wiki);
     if (position == this->Subscriptions.end())
         return ENOTEXIST;
     this->Subscriptions.erase(position);
-    pthread_mutex_unlock(&_this->subscriptions_lock);
+    pthread_mutex_unlock(&this->subscriptions_lock);
     return 0;
 }
 

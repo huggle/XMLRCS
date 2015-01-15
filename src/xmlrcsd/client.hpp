@@ -35,7 +35,7 @@ class Client
         int Unsubscribe(std::string wiki);
         bool SubscribedAny;
         std::string IP;
-        static pthread_mutex_t subscriptions_lock;
+        pthread_mutex_t subscriptions_lock;
         std::vector<std::string> Subscriptions;
     private:
         static void *main(void *dummyPt);

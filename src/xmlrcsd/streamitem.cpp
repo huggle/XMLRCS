@@ -26,7 +26,7 @@ void StreamItem::ProcessItem(std::string text)
     pthread_mutex_lock(&Client::clients_lock);
     for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
     {
-        if (Client::SubscribedAny || Client::clients[i]->IsSubscribed(site))
+        if (Client::clients[i]->SubscribedAny || Client::clients[i]->IsSubscribed(site))
         {
             Client::clients[i]->SendLine(xml);
         }
