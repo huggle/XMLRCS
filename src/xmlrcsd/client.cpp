@@ -67,8 +67,8 @@ std::string Client::ReadLine(bool *error)
     *error = false;
     while (true)
     {
-        char buffer[10];
-        ssize_t bytes = read(this->Socket, buffer, 10);
+        char buffer[200];
+        ssize_t bytes = read(this->Socket, buffer, 200);
         if (bytes < 0)
         {
             // there was some error
