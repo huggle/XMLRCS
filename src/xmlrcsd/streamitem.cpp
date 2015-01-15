@@ -28,7 +28,7 @@ void StreamItem::ProcessItem(std::string text)
     {
         if (Client::clients[i]->IsSubscribed(site))
         {
-            Client::clients[i]->SendLine(text);
+            Client::clients[i]->SendLine(xml);
         }
     }
     pthread_mutex_unlock(&Client::clients_lock);
