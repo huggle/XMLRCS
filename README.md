@@ -33,11 +33,9 @@ Output
 ======
 
 In case that you are subscribed to a wiki and there is a change, daemon will send you a 1 line of text in this format:
-url|xml
 
-for example:
 ```
-en.wikipedia.org|<edit wiki="enwiki" server_name="en.wikipedia.org" revid="642306515" oldid="642305956" summary="" title="Thadiya (Jodhpur)" namespace="0" user="Teju Suthar" bot="False" patrolled="False" minor="True" length_new="551" length_old="547" timestamp="1421155443"></edit>
+<edit wiki="enwiki" server_name="en.wikipedia.org" revid="642306515" oldid="642305956" summary="" title="Thadiya (Jodhpur)" namespace="0" user="Teju Suthar" bot="False" patrolled="False" minor="True" length_new="551" length_old="547" timestamp="1421155443"></edit>
 ```
 
 Known standard attributes of each edit node:

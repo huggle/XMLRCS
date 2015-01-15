@@ -7,9 +7,8 @@ from xml.sax.saxutils import quoteattr
 
 rs = redis.Redis('localhost') 
 
-def insert_to_redis(wiki, xml):
-    result = wiki + "|" + xml
-    rs.rpush('rc', result);
+def insert_to_redis(xml):
+    rs.rpush('rc', xml);
     return True;
 
 class WikiNamespace(socketIO_client.BaseNamespace):
@@ -45,7 +44,7 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         result += 'length_old="' + str(length_o) + '" '
         result += 'timestamp="' + str(change['timestamp']) + '">'
         result += '</edit>'
-        insert_to_redis(change['server_name'], result)
+        insert_to_redis(result)
 #        print '%(user)s edited %(title)s' % change
     def on_reconnect(self, *args):
         self.emit('subscribe', '*') 
