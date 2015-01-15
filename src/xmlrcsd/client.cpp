@@ -24,6 +24,7 @@ pthread_mutex_t Client::clients_lock;
 
 Client::Client(int fd)
 {
+    this->SubscribedAny = false;
     this->isConnected = true;
     this->Socket = fd;
     struct sockaddr_storage addr;
@@ -119,14 +120,24 @@ static std::string Sanitize(std::string name)
 
 bool Client::IsSubscribed(std::string site)
 {
+    pthread_mutex_lock(&_this->subscriptions_lock);
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
                                                             this->Subscriptions.end(),
                                                             site);
-    return (position != this->Subscriptions.end());
+    bool result = (position != this->Subscriptions.end());
+    pthread_mutex_unlock(&_this->subscriptions_lock);
+    return result;
 }
 
 int Client::Subscribe(std::string wiki)
 {
+    if (wiki == "all")
+    {
+        if (this->SubscribedAny)
+            return EALREADYEXIST;
+        this->SubscribedAny = true;
+        return 0;
+    }
     wiki = Sanitize(wiki);
     if (this->Subscriptions.size() > MAX_SUBSCRIPTIONS)
         return ETOOMANYSUBS;
@@ -134,21 +145,32 @@ int Client::Subscribe(std::string wiki)
         return EINVALID;
     if (this->IsSubscribed(wiki))
         return EALREADYEXIST;
+    pthread_mutex_lock(&_this->subscriptions_lock);
     this->Subscriptions.push_back(wiki);
+    pthread_mutex_unlock(&_this->subscriptions_lock);
     return 0;
 }
 
 int Client::Unsubscribe(std::string wiki)
 {
+    if (wiki == "all")
+    {
+        if (!this->SubscribedAny)
+            return ENOTEXIST;
+        this->SubscribedAny = false;
+        return 0;
+    }
     wiki = Sanitize(wiki);
     if (wiki.length() == 0)
         return EINVALID;
+    pthread_mutex_lock(&_this->subscriptions_lock);
     std::vector<std::string>::iterator position = std::find(this->Subscriptions.begin(),
                                                             this->Subscriptions.end(),
                                                             wiki);
     if (position == this->Subscriptions.end())
         return ENOTEXIST;
     this->Subscriptions.erase(position);
+    pthread_mutex_unlock(&_this->subscriptions_lock);
     return 0;
 }
 
@@ -230,6 +252,13 @@ void *Client::main(void *self)
             {
                 _this->SendLine("OK");
             }
+        }
+        else if (line == "clear")
+        {
+            pthread_mutex_lock(&_this->subscriptions_lock);
+            _this->Subscriptions.clear();
+            pthread_mutex_unlock(&_this->subscriptions_lock);
+            _this->SendLine("OK");
         }
         else if (line == "ping")
         {

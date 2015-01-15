@@ -33,7 +33,9 @@ class Client
         bool IsSubscribed(std::string site);
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
+        bool SubscribedAny;
         std::string IP;
+        static pthread_mutex_t subscriptions_lock;
         std::vector<std::string> Subscriptions;
     private:
         static void *main(void *dummyPt);
