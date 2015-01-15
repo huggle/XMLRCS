@@ -21,9 +21,9 @@ S en.wikipedia.org
 
 you can also use * to subscribe to all wikis.
 
-Response: OK on success or ERROR with reason on error
+Response: xml node "ok" on success or ERROR with reason on error
 ## ping
-Respond with "pong" used to test if connection is still alive or not
+Respond with xml node "pong" used to test if connection is still alive or not
 ## stat
 Display various system information useful for debugging
 ## version

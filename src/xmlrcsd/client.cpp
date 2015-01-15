@@ -208,7 +208,7 @@ void *Client::main(void *self)
             goto exit;
         }
         if (line == "version")
-            _this->SendLine(Configuration::version);
+            _this->SendLine(std::string("<versioninfo>") + Configuration::version + std::string("</versioninfo>"));
         else if (line[0] == 'S' && line[1] == ' ')
         {
             // user wants to subscribe to a wiki
