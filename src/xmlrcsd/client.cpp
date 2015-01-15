@@ -20,12 +20,37 @@
 #include "generic.hpp"
 
 std::vector<Client*> Client::clients;
-pthread_mutex_t Client::clients_lock;
+pthread_mutex_t Client::clients_lock = PTHREAD_MUTEX_INITIALIZER;
 unsigned int Client::UsersCount = 0;
+
+// This thread will take data from a pool of outgoing messages and will send them
+static void *SenderThread(void *c)
+{
+    Client *client = (Client*)c;
+    while (client->IsConnected())
+    {
+        pthread_mutex_lock(&client->OutgoingBuffer_lock);
+        if (client->OutgoingBuffer.size() == 0)
+        {
+            pthread_mutex_unlock(&client->OutgoingBuffer_lock);
+            usleep(20000);
+            continue;
+        }
+        std::string line = client->OutgoingBuffer[0];
+        client->OutgoingBuffer.erase(client->OutgoingBuffer.begin());
+        pthread_mutex_unlock(&client->OutgoingBuffer_lock);
+        client->SendLineNow(line);
+    }
+    client->ThreadRun = false;
+    return NULL;
+}
 
 Client::Client(int fd)
 {
+    pthread_mutex_init(&this->OutgoingBuffer_lock, NULL);
+    pthread_mutex_init(&this->subscriptions_lock, NULL);
     this->SubscribedAny = false;
+    this->ThreadRun = true;
     pthread_mutex_lock(&Client::clients_lock);
     UsersCount++;
     pthread_mutex_unlock(&Client::clients_lock);
@@ -35,6 +60,7 @@ Client::Client(int fd)
     char ipstr[200];
     socklen_t len = sizeof(addr);
     struct sockaddr_in *s = (struct sockaddr_in *) &addr;
+    pthread_create(&this->sender, NULL, SenderThread, (void*)this);
     getsockname(fd, (struct sockaddr *) &addr, &len);
     inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
     this->IP = std::string(ipstr);
@@ -50,6 +76,12 @@ Client::~Client()
     if (position != clients.end())
         clients.erase(position);
     pthread_mutex_unlock(&Client::clients_lock);
+    // ensure that thread will terminate
+    this->isConnected = false;
+    // we must wait for thread to finish, otherwise we get a segfault, or there is a high chance for that
+    while (this->ThreadRun)
+        usleep(200);
+    this->OutgoingBuffer.clear();
 }
 
 void Client::Launch()
@@ -58,6 +90,13 @@ void Client::Launch()
 }
 
 void Client::SendLine(std::string line)
+{
+    pthread_mutex_lock(&this->OutgoingBuffer_lock);
+    this->OutgoingBuffer.push_back(line);
+    pthread_mutex_unlock(&this->OutgoingBuffer_lock);
+}
+
+void Client::SendLineNow(std::string line)
 {
     if (!this->isConnected)
         return;

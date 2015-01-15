@@ -31,16 +31,23 @@ class Client
         ~Client();
         void Launch();
         void SendLine(std::string line);
+        void SendLineNow(std::string line);
         std::string ReadLine(bool *error);
         bool IsSubscribed(std::string site);
+        bool IsConnected() { return this->isConnected; }
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
+        pthread_mutex_t OutgoingBuffer_lock;
+        std::vector<std::string> OutgoingBuffer;
         bool SubscribedAny;
         std::string IP;
         pthread_mutex_t subscriptions_lock;
         std::vector<std::string> Subscriptions;
+        bool ThreadRun;
     private:
         static void *main(void *dummyPt);
+        //! Thread we use to deliver messages to clients so that we don't stuck whole server
+        pthread_t sender;
         bool isConnected;
         pthread_t thread;
         int Socket;

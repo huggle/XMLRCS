@@ -14,8 +14,8 @@
 #include <cstring>
 #include <sys/types.h>
 #include <errno.h>
-#include <netinet/in.h>
 #include <pthread.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include "configuration.hpp"
 #include "server.hpp"
