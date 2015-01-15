@@ -110,6 +110,11 @@ void Client::SendLineNow(std::string line)
     write(this->Socket, line.c_str(), line.length());
 }
 
+static std::string ok(std::string message)
+{
+    return std::string("<ok>") + message + "</ok";
+}
+
 std::string Client::ReadLine(bool *error)
 {
     std::string line;
@@ -285,7 +290,7 @@ void *Client::main(void *self)
                 }
             } else
             {
-                _this->SendLine(RESP_OK);
+                _this->SendLine(ok(line));
             }
         }
         else if (line[0] == 'D' && line[1] == ' ')
@@ -308,7 +313,7 @@ void *Client::main(void *self)
                 }
             } else
             {
-                _this->SendLine(RESP_OK);
+                _this->SendLine(ok(line));
             }
         }
         else if (line == "clear")
