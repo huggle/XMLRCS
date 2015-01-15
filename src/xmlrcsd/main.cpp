@@ -41,8 +41,8 @@ void *Killer(void *null)
                 if ((Client::clients[i]->LastPing + 180) < last_check)
                 {
                     Generic::Log(std::string("Client ") + Client::clients[i]->IP + " timed out - removing them");
-                    pthread_mutex_unlock(&Client::clients_lock);
-                    Client::clients[i]->Kill();
+                    // we let the unlock up on Kill so that we ensure that client doesn't get killed meanwhile
+                    Client::clients[i]->Kill(true);
                     // we need to go back to start of first loop, since the whole iteration now is unsafe
                     goto start;
                 } else

@@ -211,11 +211,20 @@ int Client::Unsubscribe(std::string wiki)
     return 0;
 }
 
-void Client::Kill()
+void Client::Kill(bool unlock)
 {
+    // in case unlock is set, it means that the vector was locked by another thread
+    // before issuing the kill request, just to ensure that it would
+    // be atomic operation, otherwise segfault might happen
     if (this->killed)
+    {
+        if (unlock)
+            pthread_mutex_unlock(&Client::clients_lock);
         return;
+    }
     this->killed = true;
+    if (unlock)
+        pthread_mutex_unlock(&Client::clients_lock);
     close(this->Socket);
     this->isConnected = false;
     delete this;

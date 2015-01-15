@@ -40,7 +40,8 @@ class Client
         bool IsConnected() { return this->isConnected; }
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
-        void Kill();
+        //! Disconnect the client
+        void Kill(bool unlock = false);
         int LastPing;
         pthread_mutex_t OutgoingBuffer_lock;
         std::vector<std::string> OutgoingBuffer;
