@@ -112,7 +112,7 @@ void Client::SendLineNow(std::string line)
 
 static std::string ok(std::string message)
 {
-    return std::string("<ok>") + message + "</ok";
+    return std::string("<ok>") + message + "</ok>";
 }
 
 std::string Client::ReadLine(bool *error)
