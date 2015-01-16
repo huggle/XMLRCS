@@ -56,6 +56,7 @@ Client::Client(int fd)
     this->ThreadRun = true;
     pthread_mutex_lock(&Client::clients_lock);
     UsersCount++;
+    Configuration::total_conn++;
     pthread_mutex_unlock(&Client::clients_lock);
     this->isConnected = true;
     this->Socket = fd;
@@ -331,7 +332,12 @@ void *Client::main(void *self)
         else if (line == "stat")
         {
             // Write some statistics to user
-            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + " users: " + SSTR(UsersCount) + "</stat>";
+            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() +
+                                             " users online: " + SSTR(UsersCount) +
+                                             " connections made since launch: " +
+                                             SSTR(Configuration::total_conn) +
+                                             " io " + SSTR(Configuration::total_io) +
+                                             "</stat>";
             _this->SendLine(uptime);
         }
         else if (line == "pong")
