@@ -331,9 +331,7 @@ void *Client::main(void *self)
         else if (line == "stat")
         {
             // Write some statistics to user
-            char users[20];
-            snprintf(users, 20, "%d", UsersCount);
-            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + " users: " + std::string(users) + "</stat>";
+            std::string uptime = std::string("<stat>uptime since: ") + retrieve_uptime() + " users: " + SSTR(UsersCount) + "</stat>";
             _this->SendLine(uptime);
         }
         else if (line == "pong")
