@@ -12,6 +12,7 @@
 #include <string>
 #include <stdexcept>
 #include <unistd.h>
+#include <signal.h>
 #include <pthread.h>
 #include <time.h>
 #include "configuration.hpp"
@@ -95,6 +96,8 @@ int main(int argc, char *argv[])
 {
     try
     {
+        // ignore broken pipes
+        signal(SIGPIPE, SIG_IGN);
         if (argc > 1 && std::string("-d") == argv[1])
         {
             Configuration::daemon = true;
