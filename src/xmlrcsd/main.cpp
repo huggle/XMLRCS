@@ -34,7 +34,7 @@ void *Killer(void *null)
     while (IsRunning)
     {
             int last_check = time(NULL);
-            usleep(200000000);
+            usleep(80000000);
         start:
             pthread_mutex_lock(&Client::clients_lock);
             for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
@@ -46,10 +46,8 @@ void *Killer(void *null)
                     Client::clients[i]->Kill(true);
                     // we need to go back to start of first loop, since the whole iteration now is unsafe
                     goto start;
-                } else
-                {
-                    Client::clients[i]->SendLine("<ping></ping>");
                 }
+                Client::clients[i]->SendLine("<ping></ping>");
             }
             pthread_mutex_unlock(&Client::clients_lock);
     }

@@ -49,11 +49,11 @@ Client::Client(int fd)
 {
     pthread_mutex_init(&this->OutgoingBuffer_lock, NULL);
     pthread_mutex_init(&this->subscriptions_lock, NULL);
+    this->ThreadRun = true;
     this->ThreadRun2 = true;
     this->SubscribedAny = false;
     this->killed = false;
     this->LastPing = time(0);
-    this->ThreadRun = true;
     pthread_mutex_lock(&Client::clients_lock);
     UsersCount++;
     Configuration::total_conn++;
@@ -255,7 +255,7 @@ const std::string retrieve_uptime()
 void *Client::main(void *self)
 {
     Client *_this = (Client*)self;
-    while (_this->isConnected)
+    while (_this->IsConnected())
     {
         bool er;
         std::string line = _this->ReadLine(&er);
