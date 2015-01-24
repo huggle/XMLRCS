@@ -16,5 +16,6 @@ std::string  Configuration::redis_host = "localhost";
 unsigned int Configuration::redis_port = 6379;
 int          Configuration::last_io = 0;
 std::string  Configuration::redis_pref = "";
+int          Configuration::debugging_level = 0;
 int          Configuration::port = 8822;
 time_t       Configuration::startup_time;

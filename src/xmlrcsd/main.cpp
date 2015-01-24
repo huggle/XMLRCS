@@ -16,6 +16,7 @@
 #include <time.h>
 #include "configuration.hpp"
 #include "client.hpp"
+#include "tp.hpp"
 #include "streamitem.hpp"
 #include "generic.hpp"
 #include "server.hpp"
@@ -33,23 +34,23 @@ void *Killer(void *null)
     while (IsRunning)
     {
             int last_check = time(NULL);
-            usleep(200000000);
+            usleep(10000000);
         start:
             pthread_mutex_lock(&Client::clients_lock);
+            Generic::Debug("Checking clients who timed out");
             for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
             {
-                if ((Client::clients[i]->LastPing + 180) < last_check)
+                if ((Client::clients[i]->LastPing + 80) < last_check)
                 {
                     Generic::Log(std::string("Client ") + Client::clients[i]->IP + " timed out - removing them");
                     // we let the unlock up on Kill so that we ensure that client doesn't get killed meanwhile
                     Client::clients[i]->Kill(true);
                     // we need to go back to start of first loop, since the whole iteration now is unsafe
                     goto start;
-                } else
-                {
-                    Client::clients[i]->SendLine("<ping></ping>");
                 }
+                Client::clients[i]->SendLine("<ping></ping>");
             }
+            Generic::Debug("Finished checking of clients");
             pthread_mutex_unlock(&Client::clients_lock);
     }
     return NULL;
@@ -95,9 +96,15 @@ int main(int argc, char *argv[])
 {
     try
     {
-        if (argc > 1 && std::string("-d") == argv[1])
+        TP *term = new TP(argc, argv);
+        if (!term->ProcessArgs())
         {
-            Configuration::daemon = true;
+            delete term;
+            return 0;
+        }
+        delete term;
+        if (Configuration::daemon)
+        {
             pid_t pid = fork();
             if (pid < 0)
             {

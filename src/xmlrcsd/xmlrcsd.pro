@@ -9,7 +9,8 @@ SOURCES += \
     hiredis/sds.c \
     configuration.cpp \
     generic.cpp \
-    streamitem.cpp
+    streamitem.cpp \
+    tp.cpp
 
 HEADERS += \
     client.hpp \
@@ -22,4 +23,5 @@ HEADERS += \
     hiredis/net.h \
     hiredis/sds.h \
     generic.hpp \
-    streamitem.hpp
+    streamitem.hpp \
+    tp.hpp

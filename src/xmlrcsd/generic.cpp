@@ -20,3 +20,11 @@ void Generic::Log(std::string text)
     else
         syslog(LOG_INFO, "%s", text.c_str());
 }
+
+
+
+void Generic::Debug(std::string text)
+{
+    if (Configuration::debugging_level > 0)
+        Generic::Log("DEBUG: " + text);
+}

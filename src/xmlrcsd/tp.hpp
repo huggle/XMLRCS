@@ -8,24 +8,17 @@
 //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //GNU General Public License for more details.
 
-#ifndef CONFIGURATION_HPP
-#define CONFIGURATION_HPP
+#ifndef TP_HPP
+#define TP_HPP
 
-#include <string>
-#include <time.h>
-
-class Configuration
+class TP
 {
     public:
-        static const std::string version;
-        static bool         daemon;
-        static int          port;
-        static int          last_io;
-        static std::string  redis_host;
-        static unsigned int redis_port;
-        static std::string  redis_pref;
-        static int          debugging_level;
-        static time_t       startup_time;
+        TP(int _argc, char **_argv);
+        bool ProcessArgs();
+    private:
+        char **argv;
+        int argc;
 };
 
-#endif
+#endif // TP_HPP

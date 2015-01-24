@@ -19,6 +19,7 @@
 
 namespace Generic
 {
+    void Debug(std::string text);
     void Log(std::string text);
 }
 
