@@ -25,6 +25,8 @@ class Configuration
         static unsigned int redis_port;
         static std::string  redis_pref;
         static int          debugging_level;
+        static unsigned long  total_conn;
+        static unsigned long  total_io;
         static time_t       startup_time;
 };
 

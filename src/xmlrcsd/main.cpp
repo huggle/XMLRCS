@@ -12,6 +12,7 @@
 #include <string>
 #include <stdexcept>
 #include <unistd.h>
+#include <signal.h>
 #include <pthread.h>
 #include <time.h>
 #include "configuration.hpp"
@@ -103,6 +104,8 @@ int main(int argc, char *argv[])
             return 0;
         }
         delete term;
+        // ignore broken pipes
+        signal(SIGPIPE, SIG_IGN);
         if (Configuration::daemon)
         {
             pid_t pid = fork();
@@ -139,6 +142,7 @@ int main(int argc, char *argv[])
                     if (reply->len > 0)
                     {
                         // Update last io time
+                        Configuration::total_io++;
                         Configuration::last_io = time(0);
                         StreamItem::ProcessItem(std::string(reply->str));
                     }
