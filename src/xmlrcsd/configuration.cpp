@@ -10,7 +10,7 @@
 
 #include "configuration.hpp"
 
-const std::string Configuration::version = "1.0.0";
+const std::string Configuration::version = "1.0.1";
 bool         Configuration::daemon = false;
 std::string  Configuration::redis_host = "localhost";
 unsigned int Configuration::redis_port = 6379;
