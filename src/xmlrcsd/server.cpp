@@ -62,7 +62,7 @@ void Server::Listen()
             std::cerr << "Cannot accept connection" << std::endl;
             continue;
         }
-        fcntl(connFd, F_SETFL, O_NONBLOCK);
+        //fcntl(connFd, F_SETFL, O_NONBLOCK);
         Client *client = new Client(connFd);
         pthread_mutex_lock(&Client::clients_lock);
         Client::clients.push_back(client);

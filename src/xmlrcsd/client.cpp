@@ -136,9 +136,9 @@ std::string Client::ReadLine(bool *error)
         }
         if (!bytes)
         {
-            // there is nothing in a buffer yet, so we sleep for a short time and then try again so that CPU is not exhausted
-            usleep(2000);
-            continue;
+            // end of communication channel
+            *error = true;
+            return line;
         }
         if (buffer[0] == '\r')
             continue;
@@ -266,6 +266,7 @@ void *Client::main(void *self)
         std::string line = _this->ReadLine(&er);
         if (er || line == "exit")
         {
+            Generic::Debug("Error data");
             close(_this->Socket);
             goto exit;
         }
