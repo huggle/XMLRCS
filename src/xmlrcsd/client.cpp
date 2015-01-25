@@ -26,6 +26,7 @@ unsigned int Client::UsersCount = 0;
 // This thread will take data from a pool of outgoing messages and will send them
 static void *SenderThread(void *c)
 {
+    pthread_detach(pthread_self());
     Client *client = (Client*)c;
     while (client->IsConnected())
     {
@@ -82,11 +83,14 @@ Client::~Client()
     pthread_mutex_unlock(&Client::clients_lock);
     // ensure that thread will terminate
     this->isConnected = false;
+    Generic::Debug("Threads wait");
     // we must wait for thread to finish, otherwise we get a segfault, or there is a high chance for that
     while (this->ThreadRun)
         usleep(200);
+    Generic::Debug("Thread 1 finished");
     while (this->ThreadRun2)
         usleep(200);
+    Generic::Debug("Thread 2 finished");
     this->OutgoingBuffer.clear();
 }
 
@@ -255,6 +259,7 @@ const std::string retrieve_uptime()
 void *Client::main(void *self)
 {
     Client *_this = (Client*)self;
+    pthread_detach(pthread_self());
     while (_this->IsConnected())
     {
         bool er;

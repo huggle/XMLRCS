@@ -31,6 +31,7 @@ bool IsRunning = true;
 
 void *Killer(void *null)
 {
+    pthread_detach(pthread_self());
     (void)null;
     while (IsRunning)
     {

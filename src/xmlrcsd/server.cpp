@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <sys/socket.h>
 #include <iostream>
+#include <fcntl.h>
 #include <cstring>
 #include <sys/types.h>
 #include <errno.h>
@@ -39,7 +40,8 @@ void Server::Listen()
     this->open = true;
 
     this->ListenerFd = socket(AF_INET, SOCK_STREAM, 0);
-
+    int value = 1;
+    setsockopt(this->ListenerFd, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value));
     if (this->ListenerFd < 0)
         throw std::runtime_error("Unable to create a socket for listener");
 
@@ -60,6 +62,7 @@ void Server::Listen()
             std::cerr << "Cannot accept connection" << std::endl;
             continue;
         }
+        fcntl(connFd, F_SETFL, O_NONBLOCK);
         Client *client = new Client(connFd);
         pthread_mutex_lock(&Client::clients_lock);
         Client::clients.push_back(client);
