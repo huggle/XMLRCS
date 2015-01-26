@@ -9,6 +9,7 @@
 //GNU General Public License for more details.
 
 #include <iostream>
+#include <sstream>
 #include <syslog.h>
 #include "configuration.hpp"
 #include "generic.hpp"
@@ -21,7 +22,12 @@ void Generic::Log(std::string text)
         syslog(LOG_INFO, "%s", text.c_str());
 }
 
-
+std::string Generic::IntToStdString(int input)
+{
+    std::stringstream sx;
+    sx << input;
+    return sx.str();
+}
 
 void Generic::Debug(std::string text)
 {

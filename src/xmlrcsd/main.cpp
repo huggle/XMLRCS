@@ -44,7 +44,7 @@ void *Killer(void *null)
             {
                 if ((Client::clients[i]->LastPing + 80) < last_check)
                 {
-                    Generic::Log(std::string("Client ") + Client::clients[i]->IP + " timed out - removing them");
+                    Generic::Log(std::string("Client " + Client::clients[i]->SID + " (") + Client::clients[i]->IP + ") timed out - removing them");
                     // we let the unlock up on Kill so that we ensure that client doesn't get killed meanwhile
                     Client::clients[i]->Kill(true);
                     // we need to go back to start of first loop, since the whole iteration now is unsafe

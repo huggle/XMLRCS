@@ -27,6 +27,7 @@ class Client
 {
     public:
         static std::vector<Client*> clients;
+        static unsigned int LastID;
         static pthread_mutex_t clients_lock;
         static unsigned int UsersCount;
 
@@ -38,8 +39,11 @@ class Client
         std::string ReadLine(bool *error);
         bool IsSubscribed(std::string site);
         bool IsConnected() { return this->isConnected; }
+        void Close();
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
+        int ID;
+        std::string SID;
         //! Disconnect the client
         void Kill(bool unlock = false);
         int LastPing;
@@ -57,6 +61,7 @@ class Client
         //! Thread we use to deliver messages to clients so that we don't stuck whole server
         pthread_t sender;
         bool isConnected;
+        bool closed;
         pthread_t thread;
         int Socket;
 };

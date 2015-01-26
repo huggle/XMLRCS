@@ -20,6 +20,7 @@
 namespace Generic
 {
     void Debug(std::string text);
+    std::string IntToStdString(int input);
     void Log(std::string text);
 }
 

@@ -13,6 +13,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "configuration.hpp"
@@ -21,6 +22,7 @@
 
 std::vector<Client*> Client::clients;
 pthread_mutex_t Client::clients_lock = PTHREAD_MUTEX_INITIALIZER;
+unsigned int Client::LastID = 10;
 unsigned int Client::UsersCount = 0;
 
 // This thread will take data from a pool of outgoing messages and will send them
@@ -51,10 +53,13 @@ Client::Client(int fd)
     pthread_mutex_init(&this->OutgoingBuffer_lock, NULL);
     pthread_mutex_init(&this->subscriptions_lock, NULL);
     this->ThreadRun = true;
+    this->closed = false;
     this->ThreadRun2 = true;
     this->SubscribedAny = false;
     this->killed = false;
     this->LastPing = time(0);
+    this->ID = LastID++;
+    this->SID = Generic::IntToStdString(this->ID);
     pthread_mutex_lock(&Client::clients_lock);
     UsersCount++;
     Configuration::total_conn++;
@@ -83,14 +88,14 @@ Client::~Client()
     pthread_mutex_unlock(&Client::clients_lock);
     // ensure that thread will terminate
     this->isConnected = false;
-    Generic::Debug("Threads wait");
+    Generic::Debug(this->SID + " Threads wait");
     // we must wait for thread to finish, otherwise we get a segfault, or there is a high chance for that
     while (this->ThreadRun)
         usleep(200);
-    Generic::Debug("Thread 1 finished");
+    Generic::Debug(this->SID + " Thread 1 finished");
     while (this->ThreadRun2)
         usleep(200);
-    Generic::Debug("Thread 2 finished");
+    Generic::Debug(this->SID + " Thread 2 finished");
     this->OutgoingBuffer.clear();
 }
 
@@ -104,6 +109,14 @@ void Client::SendLine(std::string line)
     pthread_mutex_lock(&this->OutgoingBuffer_lock);
     this->OutgoingBuffer.push_back(line);
     pthread_mutex_unlock(&this->OutgoingBuffer_lock);
+}
+
+void Client::Close()
+{
+    if (this->closed)
+        return;
+    close(this->Socket);
+    this->closed = true;
 }
 
 void Client::SendLineNow(std::string line)
@@ -235,7 +248,7 @@ void Client::Kill(bool unlock)
     this->killed = true;
     if (unlock)
         pthread_mutex_unlock(&Client::clients_lock);
-    close(this->Socket);
+    this->Close();
     this->isConnected = false;
     delete this;
 }
@@ -267,7 +280,7 @@ void *Client::main(void *self)
         if (er || line == "exit")
         {
             Generic::Debug("Error data");
-            close(_this->Socket);
+            _this->Close();
             goto exit;
         }
         if (line.size())
@@ -356,7 +369,7 @@ void *Client::main(void *self)
         }
     }
     exit:
-        Generic::Log("Connection closed: " + _this->IP);
+        Generic::Log(_this->SID + ": Connection closed: " + _this->IP);
         _this->ThreadRun2 = false;
         _this->Kill();
         return NULL;
