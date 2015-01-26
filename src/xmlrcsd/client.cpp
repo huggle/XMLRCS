@@ -137,6 +137,7 @@ std::string Client::ReadLine(bool *error)
 {
     std::string line;
     *error = false;
+    Generic::Debug(this->SID + " waiting for input from client");
     while (true)
     {
         char buffer[1];
@@ -145,20 +146,22 @@ std::string Client::ReadLine(bool *error)
         {
             // there was some error
             *error = true;
-            return line;
+            goto exit;
         }
         if (!bytes)
         {
             // end of communication channel
             *error = true;
-            return line;
+            goto exit;
         }
         if (buffer[0] == '\r')
             continue;
         if (buffer[0] == '\n')
-            return line;
+            goto exit;
         line += buffer[0];
     }
+    exit:
+    Generic::Debug(this->SID + " finished waiting for data from client");
     return line;
 }
 
