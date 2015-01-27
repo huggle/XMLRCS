@@ -63,6 +63,10 @@ void Server::Listen()
             continue;
         }
         //fcntl(connFd, F_SETFL, O_NONBLOCK);
+        struct timeval tv;
+        tv.tv_sec = 80;
+        tv.tv_usec = 0;
+        setsockopt(connFd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval));
         Client *client = new Client(connFd);
         pthread_mutex_lock(&Client::clients_lock);
         Client::clients.push_back(client);

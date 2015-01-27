@@ -145,6 +145,7 @@ std::string Client::ReadLine(bool *error)
         if (bytes < 0)
         {
             // there was some error
+            Generic::Debug(this->SID + " error: " + Generic::IntToStdString(bytes));
             *error = true;
             goto exit;
         }
@@ -165,9 +166,9 @@ std::string Client::ReadLine(bool *error)
     return line;
 }
 
-static std::string mker(std::string text)
+static std::string mker(std::string text, int number)
 {
-    return std::string("<error>") + text + std::string("</error>");
+    return std::string("<error code=\"" + Generic::IntToStdString(number) + "\">") + text + std::string("</error>");
 }
 
 static std::string Sanitize(std::string name)
@@ -280,9 +281,14 @@ void *Client::main(void *self)
     {
         bool er;
         std::string line = _this->ReadLine(&er);
-        if (er || line == "exit")
+        if (er)
         {
             Generic::Debug("Error data");
+            _this->Close();
+            goto exit;
+        }
+        if (line == "exit")
+        {
             _this->Close();
             goto exit;
         }
@@ -302,13 +308,13 @@ void *Client::main(void *self)
                 switch(result)
                 {
                     case EINVALID:
-                        _this->SendLine(mker("This is not a valid wiki name"));
+                        _this->SendLine(mker("This is not a valid wiki name", EINVALID));
                         break;
                     case EALREADYEXIST:
-                        _this->SendLine(mker("You are already subscribed to this one"));
+                        _this->SendLine(mker("You are already subscribed to this one", EALREADYEXIST));
                         break;
                     case ETOOMANYSUBS:
-                        _this->SendLine(mker("You subscribed to too many wikis now"));
+                        _this->SendLine(mker("You subscribed to too many wikis now", ETOOMANYSUBS));
                         break;
                 }
             } else
@@ -328,10 +334,10 @@ void *Client::main(void *self)
                 switch(result)
                 {
                     case EINVALID:
-                        _this->SendLine(mker("This is not a valid wiki name"));
+                        _this->SendLine(mker("This is not a valid wiki name", EINVALID));
                         break;
                     case ENOTEXIST:
-                        _this->SendLine(mker("You are not subscribed to this one"));
+                        _this->SendLine(mker("You are not subscribed to this one", ENOTEXIST));
                         break;
                 }
             } else
@@ -368,7 +374,7 @@ void *Client::main(void *self)
         }
         else
         {
-            _this->SendLine(mker(std::string("Unknown: ") + line));
+            _this->SendLine(mker(std::string("Unknown: ") + line, 0));
         }
     }
     exit:
