@@ -38,6 +38,7 @@ namespace XmlRcs
         private TcpClient client = null;
         private DateTime lastPing;
         private string lineBuffer = "";
+        private System.Threading.Timer timer = null;
         private Byte[] buffer = new Byte[512];
         private List<string> lSubscriptions = null;
         private bool autoconn;
@@ -63,6 +64,12 @@ namespace XmlRcs
             {
                 if (this.client == null)
                     return false;
+                if (this.lastPing.AddSeconds(Configuration.PingTimeout) > DateTime.Now)
+                {
+                    // server timed out
+                    this.Disconnect();
+                    return false;
+                }
                 return (this.client.Client.Connected);
             }
         }
@@ -74,6 +81,11 @@ namespace XmlRcs
         public Provider(bool autoreconnect = false)
         {
             this.autoconn = autoreconnect;
+        }
+
+        private void ping(object state)
+        {
+            this.send("ping");
         }
 
         private bool isConnected()
@@ -141,6 +153,7 @@ namespace XmlRcs
         {
             // put the text into XML document
             XmlDocument document = new XmlDocument();
+            this.lastPing = DateTime.Now;
             document.LoadXml(data);
             switch (document.DocumentElement.Name)
             {
@@ -256,6 +269,7 @@ namespace XmlRcs
             // there is some weird bug in .Net that put garbage to first packet that is sent out
             // this is a dummy line that will flush out that garbage
             this.send("pong");
+            this.timer = new System.Threading.Timer(ping, null, Configuration.PingWait * 1000, Configuration.PingWait * 1000);
             this.lastPing = DateTime.Now;
             this.resetCallback();
             return true;
@@ -289,6 +303,8 @@ namespace XmlRcs
             if (!this.IsConnected)
                 return;
 
+            this.timer.Dispose();
+            this.timer = null;
             this.send("exit");
             this.client.Close();
             this.networkStream = null;
