@@ -41,6 +41,7 @@ namespace XmlRcs
         private Byte[] buffer = new Byte[512];
         private List<string> lSubscriptions = null;
         private bool autoconn;
+        public bool AutoResubscribe;
 
         public delegate void EditHandler(object sender, EditEventArgs args);
         public delegate void TimeoutErrorHandler(object sender, EventArgs args);
@@ -80,9 +81,10 @@ namespace XmlRcs
         /// Creates a new provider
         /// </summary>
         /// <param name="autoreconnect">if true the provider will automatically try to reconnect in case it wasn't connected</param>
-        public Provider(bool autoreconnect = false)
+        public Provider(bool autoreconnect = false, bool autoresubscribe = false)
         {
             this.autoconn = autoreconnect;
+            this.AutoResubscribe = autoresubscribe;
         }
 
         private void ping(object state)
@@ -282,6 +284,13 @@ namespace XmlRcs
             // there is some weird bug in .Net that put garbage to first packet that is sent out
             // this is a dummy line that will flush out that garbage
             this.send("pong");
+            if (this.AutoResubscribe)
+            {
+                foreach (string item in this.lSubscriptions)
+                {
+                    this.send("S " + item);
+                }
+            }
             this.timer = new System.Threading.Timer(ping, null, Configuration.PingWait * 1000, Configuration.PingWait * 1000);
             this.resetCallback();
             return true;
