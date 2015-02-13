@@ -16,7 +16,6 @@ using System.Text;
 using System.IO;
 using System.Xml;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace XmlRcs
 {
