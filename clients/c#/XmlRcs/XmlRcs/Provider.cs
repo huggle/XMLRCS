@@ -44,7 +44,9 @@ namespace XmlRcs
         private bool autoconn;
 
         public delegate void EditHandler(object sender, EditEventArgs args);
+        public delegate void TimeoutErrorHandler(object sender, EventArgs args);
         public event EditHandler On_Change;
+        public event TimeoutErrorHandler On_Timeout;
 
         public List<string> Subscriptions
         {
@@ -64,10 +66,11 @@ namespace XmlRcs
             {
                 if (this.client == null)
                     return false;
-                if (this.lastPing.AddSeconds(Configuration.PingTimeout) > DateTime.Now)
+                if (this.lastPing.AddSeconds(Configuration.PingTimeout) < DateTime.Now)
                 {
                     // server timed out
-                    this.Disconnect();
+                    this.__evt_Timeout();
+                    this.kill();
                     return false;
                 }
                 return (this.client.Client.Connected);
@@ -99,6 +102,12 @@ namespace XmlRcs
             return true;
         }
 
+        private void __evt_Timeout()
+        {
+            if (this.On_Timeout != null)
+                this.On_Timeout(this, new EventArgs());
+        }
+
         private void __evt_Edit(RecentChange change)
         {
             if (this.On_Change != null)
@@ -118,6 +127,8 @@ namespace XmlRcs
 
         private void OnReceive(IAsyncResult data)
         {
+            if (this.networkStream == null)
+                return;
             int bytes = this.networkStream.EndRead(data);
             string text = System.Text.Encoding.UTF8.GetString(buffer, 0, bytes);
             if (!text.Contains("\n"))
@@ -242,6 +253,8 @@ namespace XmlRcs
 
         private void resetCallback()
         {
+            if (this.networkStream == null)
+                return;
             if (!string.IsNullOrEmpty(this.lineBuffer) && this.lineBuffer.EndsWith("\n"))
             {
                 this.processOutput(this.lineBuffer);
@@ -260,6 +273,7 @@ namespace XmlRcs
             if (this.IsConnected)
                 return false;
 
+            this.lastPing = DateTime.Now;
             this.lSubscriptions = new List<string>();
             this.client = new TcpClient(Configuration.Server, Configuration.Port);
             this.networkStream = this.client.GetStream();
@@ -270,7 +284,6 @@ namespace XmlRcs
             // this is a dummy line that will flush out that garbage
             this.send("pong");
             this.timer = new System.Threading.Timer(ping, null, Configuration.PingWait * 1000, Configuration.PingWait * 1000);
-            this.lastPing = DateTime.Now;
             this.resetCallback();
             return true;
         }
@@ -295,6 +308,21 @@ namespace XmlRcs
             return true;
         }
 
+        private void kill()
+        {
+            if (this.timer != null)
+            {
+                this.timer.Dispose();
+                this.timer = null;
+            }
+            if (this.client != null)
+                this.client.Close();
+            this.networkStream = null;
+            this.streamReader = null;
+            this.streamWriter = null;
+            this.client = null;
+        }
+
         /// <summary>
         /// Disconnect from server
         /// </summary>
@@ -303,14 +331,8 @@ namespace XmlRcs
             if (!this.IsConnected)
                 return;
 
-            this.timer.Dispose();
-            this.timer = null;
             this.send("exit");
-            this.client.Close();
-            this.networkStream = null;
-            this.streamReader = null;
-            this.streamWriter = null;
-            this.client = null;
+            this.kill();
         }
 
         public bool Reconnect()
