@@ -21,6 +21,11 @@ namespace XmlRcs
     /// </summary>
     public class Configuration
     {
+        /// <summary>
+        /// Convert unix
+        /// </summary>
+        /// <param name="unixTimeStamp"></param>
+        /// <returns></returns>
         public static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
         {
             // Unix timestamp is seconds past epoch
@@ -28,11 +33,17 @@ namespace XmlRcs
             dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
             return dtDateTime;
         }
-        public static readonly Version Version = new System.Version(1, 0, 0, 0);
+        /// <summary>
+        /// Version of XmlRcs
+        /// </summary>
+        public static readonly Version Version = new System.Version(1, 0, 1, 0);
         /// <summary>
         /// Server of XmlRcs you will need to reconnect the provider in order to apply change to this settings
         /// </summary>
         public static string Server = "huggle-rc.wmflabs.org";
+        /// <summary>
+        /// Port
+        /// </summary>
         public static int Port = 8822;
         /// <summary>
         /// If there is no response from server for this time it will be considered timed out

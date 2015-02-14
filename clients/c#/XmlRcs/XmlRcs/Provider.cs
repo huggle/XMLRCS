@@ -19,6 +19,33 @@ using System.Net.Sockets;
 
 namespace XmlRcs
 {
+    public class ErrorEventArgs : EventArgs
+    {
+        private bool isFatal;
+        private string message;
+        public bool Fatal { get { return this.isFatal; } }
+        public string Message { get { return message; } }
+
+        public ErrorEventArgs(bool fatal, string ex)
+        {
+            this.isFatal = fatal;
+            this.message = ex;
+        }
+    }
+
+    /// <summary>
+    /// Event args used when only a single string needs to be passed to client
+    /// </summary>
+    public class MessageEventArgs : EventArgs
+    {
+        public string Message;
+
+        public MessageEventArgs(string text)
+        {
+            this.Message = text;
+        }
+    }
+
     public class EditEventArgs : EventArgs
     {
         public EditEventArgs(RecentChange change)
@@ -45,8 +72,12 @@ namespace XmlRcs
 
         public delegate void EditHandler(object sender, EditEventArgs args);
         public delegate void TimeoutErrorHandler(object sender, EventArgs args);
+        public delegate void ErrorHandler(object sender, XmlRcs.ErrorEventArgs args);
+        public delegate void OKHandler(object sender, XmlRcs.MessageEventArgs args);
         public event EditHandler On_Change;
+        public event OKHandler On_OK;
         public event TimeoutErrorHandler On_Timeout;
+        public event ErrorHandler On_Error;
 
         public List<string> Subscriptions
         {
@@ -85,6 +116,21 @@ namespace XmlRcs
         {
             this.autoconn = autoreconnect;
             this.AutoResubscribe = autoresubscribe;
+        }
+
+        private void __evt_ok(string text)
+        {
+            // check if there is some event for this
+            if (this.On_OK != null)
+            {
+                this.On_OK(this, new MessageEventArgs(text));
+            }
+        }
+
+        private void __evt_Error(XmlRcs.ErrorEventArgs er)
+        {
+            if (this.On_Error != null)
+                this.On_Error(this, er);
         }
 
         private void ping(object state)
@@ -173,10 +219,13 @@ namespace XmlRcs
                     this.send("pong");
                     break;
                 case "fatal":
+                    this.__evt_Error(new ErrorEventArgs(true, document.DocumentElement.InnerText));
                     break;
                 case "error":
+                    this.__evt_Error(new ErrorEventArgs(false, document.DocumentElement.InnerText));
                     break;
                 case "ok":
+                    this.__evt_ok(document.DocumentElement.InnerText);
                     break;
                 case "edit":
                     {
