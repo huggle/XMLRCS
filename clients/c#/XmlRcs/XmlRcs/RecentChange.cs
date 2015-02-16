@@ -22,14 +22,33 @@ namespace XmlRcs
     /// </summary>
     public class RecentChange
     {
+        /// <summary>
+        /// Type of a change
+        /// </summary>
         public enum ChangeType
         {
+            /// <summary>
+            /// Regular edit
+            /// </summary>
             Edit,
+            /// <summary>
+            /// Log
+            /// </summary>
             Log,
+            /// <summary>
+            /// New page
+            /// </summary>
             New,
+            /// <summary>
+            /// Unknown type of change
+            /// </summary>
             Unknown
         }
 
+        /// <summary>
+        /// Set all strings that contained unknown value to empty string, this can be useful in case you don't care if value
+        /// was known or not
+        /// </summary>
         public void EmptyNulls()
         {
             if (this.Wiki == null)
@@ -47,14 +66,41 @@ namespace XmlRcs
         /// Internal name of wiki
         /// </summary>
         public string Wiki = null;
+        /// <summary>
+        /// Name of server
+        /// </summary>
         public string ServerName = null;
+        /// <summary>
+        /// Name of page
+        /// </summary>
         public string Title = null;
+        /// <summary>
+        /// Namespace
+        /// </summary>
         public int Namespace = 0;
+        /// <summary>
+        /// Revision id
+        /// </summary>
         public int RevID = 0;
+        /// <summary>
+        /// Old id, this is ID
+        /// </summary>
         public int OldID = 0;
+        /// <summary>
+        /// Name of user who did this change
+        /// </summary>
         public string User = null;
+        /// <summary>
+        /// Whether the change was flagged as bot edit
+        /// </summary>
         public bool Bot = false;
+        /// <summary>
+        /// Patrolled
+        /// </summary>
         public bool Patrolled = false;
+        /// <summary>
+        /// Minor
+        /// </summary>
         public bool Minor = false;
         public ChangeType Type = ChangeType.Unknown;
         public int LengthNew = 0;

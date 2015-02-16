@@ -19,13 +19,29 @@ using System.Net.Sockets;
 
 namespace XmlRcs
 {
+    /// <summary>
+    /// Information about error
+    /// </summary>
     public class ErrorEventArgs : EventArgs
     {
         private bool isFatal;
         private string message;
+        /// <summary>
+        /// Whether the error was fatal or not,
+        /// fatal errors mean that XmlRcs
+        /// daemon stopped working
+        /// </summary>
         public bool Fatal { get { return this.isFatal; } }
+        /// <summary>
+        /// Message of the error
+        /// </summary>
         public string Message { get { return message; } }
 
+        /// <summary>
+        /// Creates a new instance of this
+        /// </summary>
+        /// <param name="fatal"></param>
+        /// <param name="ex"></param>
         public ErrorEventArgs(bool fatal, string ex)
         {
             this.isFatal = fatal;
@@ -46,14 +62,17 @@ namespace XmlRcs
         }
     }
 
+    /// <summary>
+    /// Contains information about the RC item
+    /// </summary>
     public class EditEventArgs : EventArgs
     {
+        public RecentChange Change;
+
         public EditEventArgs(RecentChange change)
         {
             this.Change = change;
         }
-
-        public RecentChange Change;
     }
 
     public class Provider
