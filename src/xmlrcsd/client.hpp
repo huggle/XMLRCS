@@ -33,19 +33,19 @@ class Client
 
         Client(int fd);
         ~Client();
+        void Close();
+        //! Disconnect the client
+        void Kill(bool unlock = false);
         void Launch();
         void SendLine(std::string line);
         void SendLineNow(std::string line);
         std::string ReadLine(bool *error);
         bool IsSubscribed(std::string site);
         bool IsConnected() { return this->isConnected; }
-        void Close();
         int Subscribe(std::string wiki);
         int Unsubscribe(std::string wiki);
         int ID;
         std::string SID;
-        //! Disconnect the client
-        void Kill(bool unlock = false);
         int LastPing;
         pthread_mutex_t OutgoingBuffer_lock;
         std::vector<std::string> OutgoingBuffer;
