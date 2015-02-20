@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import sys
 import logging
-sys.path.append('/home/petanb/Public/XMLRCS/src/ws2r/socketIO-client')
 import socketIO_client
 import json
 import redis
