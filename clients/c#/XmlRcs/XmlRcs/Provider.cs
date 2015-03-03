@@ -151,6 +151,13 @@ namespace XmlRcs
             this.AutoResubscribe = autoresubscribe;
         }
 
+        ~Provider()
+        {
+            // clean up some resources - this will ensure that all references to thread will be removed
+            this.Disconnect();
+            ThreadPool.KillThread(this.ProviderThread);
+        }
+
         private void ping(object state)
         {
             this.send("ping");
