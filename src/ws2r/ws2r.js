@@ -10,8 +10,24 @@ function insert2redis(wiki, xml) {
     return true;
 }
 
+function my_replace(text, what_to_replace, with_what)
+{
+    var result = text;
+    while (result.indexOf(what_to_replace) > -1) {
+        result = result.replace(what_to_replace, with_what);
+    }
+    return result;
+}
+
 function quoteattr(xml) {
-    return "\"" + xml.replace("\"", "&quot;").replace("'", "&apos;") + "\"";
+    var escaped = xml;
+    escaped = my_replace(escaped, "&", "&apos;");
+    escaped = my_replace(escaped, '"', '&quot;');
+    escaped = my_replace(escaped, "'", '&apos;');
+    escaped = my_replace(escaped, "\n", " ");
+    escaped = my_replace(escaped, "<", "&lt;");
+    escaped = my_replace(escaped, ">", "&gt;");
+    return '"' + escaped + '"';
 }
   
 socket.on( 'connect', function () {
@@ -28,10 +44,10 @@ socket.on( 'change', function ( data ) {
      var old = '';
      if (data.revision !== undefined) {
          if (data.revision.new !== null) {
-             rev_id = 'revid="' + data.revision.new.toString() + '" ';
+             rev_id = 'revid=' + quoteattr(data.revision.new.toString()) + ' ';
          }
          if (data.revision.old !== null) {
-             old = 'oldid="' + data.revision.old.toString() + '" ';
+             old = 'oldid=' + quoteattr(data.revision.old.toString()) + ' ';
          }
      }
      if (data.patrolled !== undefined) {
@@ -48,20 +64,20 @@ socket.on( 'change', function ( data ) {
              length_o = data.length.old;
          }
      }
-     xml += '<edit wiki="' + data.wiki + '" ';
-     xml += 'server_name="' + data.server_name + '" ';
+     xml += '<edit wiki=' + quoteattr(data.wiki) + ' ';
+     xml += 'server_name=' + quoteattr(data.server_name) + ' ';
      xml += 'summary=' + quoteattr(data.comment) + ' ';
      xml += rev_id + old;
      xml += 'title=' +  quoteattr(data.title) + ' ';
-     xml += 'namespace="' + data.namespace.toString() + '" ';
+     xml += 'namespace=' + quoteattr(data.namespace.toString()) + ' ';
      xml += 'user=' + quoteattr(data.user) + ' ';
-     xml += 'bot="' + data.bot.toString() + '" ';
-     xml += 'patrolled="' + patrolled + '" ';
-     xml += 'minor="' + minor + '" ';
+     xml += 'bot=' + quoteattr(data.bot.toString()) + ' ';
+     xml += 'patrolled=' + quoteattr(patrolled) + ' ';
+     xml += 'minor=' + quoteattr(minor) + ' ';
      xml += 'type=' + quoteattr(data.type) + ' ';
-     xml += 'length_new="' + length_n.toString() + '" ';
-     xml += 'length_old="' + length_o.toString() + '" ';
-     xml += 'timestamp="' + data.timestamp.toString() + '">';
+     xml += 'length_new=' + quoteattr(length_n.toString()) + ' ';
+     xml += 'length_old=' + quoteattr(length_o.toString()) + ' ';
+     xml += 'timestamp=' + quoteattr(data.timestamp.toString()) + '>';
      xml += '</edit>';
      insert2redis(data.server_name, xml);
 } );
