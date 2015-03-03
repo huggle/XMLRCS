@@ -20,7 +20,9 @@ function my_replace(text, what_to_replace, with_what)
 }
 
 function quoteattr(xml) {
-    var escaped = my_replace(xml, '"', '&quot;');
+    var escaped = xml;
+    escaped = my_replace(escaped, "&", "&apos;");
+    escaped = my_replace(escaped, '"', '&quot;');
     escaped = my_replace(escaped, "'", '&apos;');
     escaped = my_replace(escaped, "\n", " ");
     escaped = my_replace(escaped, "<", "&lt;");
