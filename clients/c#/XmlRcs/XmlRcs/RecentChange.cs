@@ -103,9 +103,21 @@ namespace XmlRcs
         /// </summary>
         public bool Minor = false;
         public ChangeType Type = ChangeType.Unknown;
+        /// <summary>
+        /// New length of a change
+        /// </summary>
         public int LengthNew = 0;
+        /// <summary>
+        /// Old length of a change
+        /// </summary>
         public int LengthOld = 0;
+        /// <summary>
+        /// Summary of change
+        /// </summary>
         public string Summary = null;
+        /// <summary>
+        /// RAW XML text
+        /// </summary>
         public string OriginalXml;
         /// <summary>
         /// If no timestamp was provided this will equal minimal time

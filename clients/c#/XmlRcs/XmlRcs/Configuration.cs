@@ -36,7 +36,7 @@ namespace XmlRcs
         /// <summary>
         /// Version of XmlRcs
         /// </summary>
-        public static readonly Version Version = new System.Version(1, 0, 1, 0);
+        public static readonly Version Version = new System.Version(1, 0, 2, 0);
         /// <summary>
         /// Server of XmlRcs you will need to reconnect the provider in order to apply change to this settings
         /// </summary>

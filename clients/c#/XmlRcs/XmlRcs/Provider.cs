@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Threading;
 using System.Xml;
 using System.Net.Sockets;
 
@@ -75,6 +76,16 @@ namespace XmlRcs
         }
     }
 
+    public class ExEventArgs : EventArgs
+    {
+        public Exception Exception;
+
+        public ExEventArgs(Exception exception)
+        {
+            this.Exception = exception;
+        }
+    }
+
     public class Provider
     {
         private StreamReader streamReader = null;
@@ -82,21 +93,23 @@ namespace XmlRcs
         private NetworkStream networkStream = null;
         private TcpClient client = null;
         private DateTime lastPing;
-        private string lineBuffer = "";
         private System.Threading.Timer timer = null;
-        private Byte[] buffer = new Byte[512];
         private List<string> lSubscriptions = null;
         private bool autoconn;
         public bool AutoResubscribe;
+        private bool disconnecting = false;
+        private Thread ProviderThread = null;
 
         public delegate void EditHandler(object sender, EditEventArgs args);
         public delegate void TimeoutErrorHandler(object sender, EventArgs args);
         public delegate void ErrorHandler(object sender, XmlRcs.ErrorEventArgs args);
         public delegate void OKHandler(object sender, XmlRcs.MessageEventArgs args);
+        public delegate void ExceptionHandler(object sender, XmlRcs.ExEventArgs args);
         public event EditHandler On_Change;
         public event OKHandler On_OK;
         public event TimeoutErrorHandler On_Timeout;
         public event ErrorHandler On_Error;
+        public event ExceptionHandler On_Exception;
 
         public List<string> Subscriptions
         {
@@ -131,10 +144,27 @@ namespace XmlRcs
         /// Creates a new provider
         /// </summary>
         /// <param name="autoreconnect">if true the provider will automatically try to reconnect in case it wasn't connected</param>
+        /// <param name="autoresubscribe"></param>
         public Provider(bool autoreconnect = false, bool autoresubscribe = false)
         {
             this.autoconn = autoreconnect;
             this.AutoResubscribe = autoresubscribe;
+        }
+
+        private void ping(object state)
+        {
+            this.send("ping");
+        }
+
+        private bool isConnected()
+        {
+            if (!this.IsConnected)
+            {
+                if (!this.autoconn || this.disconnecting)
+                    return false;
+                return this.Connect();
+            }
+            return true;
         }
 
         private void __evt_ok(string text)
@@ -152,20 +182,10 @@ namespace XmlRcs
                 this.On_Error(this, er);
         }
 
-        private void ping(object state)
+        private void __evt_Exception(Exception er)
         {
-            this.send("ping");
-        }
-
-        private bool isConnected()
-        {
-            if (!this.IsConnected)
-            {
-                if (!this.autoconn)
-                    return false;
-                return this.Connect();
-            }
-            return true;
+            if (this.On_Exception != null)
+                this.On_Exception(this, new ExEventArgs(er));
         }
 
         private void __evt_Timeout()
@@ -188,34 +208,8 @@ namespace XmlRcs
         {
             if (!this.IsConnected)
                 return;
-            this.streamWriter.WriteLine(data);
-        }
-
-        private void OnReceive(IAsyncResult data)
-        {
-            if (this.networkStream == null)
-                return;
-            int bytes = this.networkStream.EndRead(data);
-            string text = System.Text.Encoding.UTF8.GetString(buffer, 0, bytes);
-            if (!text.Contains("\n"))
-            {
-                this.lineBuffer += text;
-            }
-            else
-            {
-                List<string> parts = new List<string>(text.Split('\n'));
-                while (parts.Count > 0)
-                {
-                    this.lineBuffer += parts[0];
-                    if (parts.Count > 1)
-                    {
-                        this.processOutput(this.lineBuffer + "\n");
-                        this.lineBuffer = "";
-                    }
-                    parts.RemoveAt(0);
-                }
-            }
-            this.resetCallback();
+            lock (this.streamWriter)
+                this.streamWriter.WriteLine(data);
         }
 
         private static int TryParseIS(string input)
@@ -320,19 +314,6 @@ namespace XmlRcs
             }
         }
 
-        private void resetCallback()
-        {
-            if (this.networkStream == null)
-                return;
-            if (!string.IsNullOrEmpty(this.lineBuffer) && this.lineBuffer.EndsWith("\n"))
-            {
-                this.processOutput(this.lineBuffer);
-                this.lineBuffer = "";
-            }
-            AsyncCallback callback = new AsyncCallback(OnReceive);
-            this.networkStream.BeginRead(buffer, 0, buffer.Length, callback, this.networkStream);
-        }
-
         /// <summary>
         /// Connect to XmlRcs server, this function needs to be called before you can start subscribing to changes on wiki
         /// </summary>
@@ -359,9 +340,34 @@ namespace XmlRcs
                     this.send("S " + item);
                 }
             }
+            this.ProviderThread = new Thread(loop);
+            this.ProviderThread.Name = "XmlRcs/Provider/" + Configuration.Server;
+            this.ProviderThread.Start();
             this.timer = new System.Threading.Timer(ping, null, Configuration.PingWait * 1000, Configuration.PingWait * 1000);
-            this.resetCallback();
             return true;
+        }
+
+        private void loop()
+        {
+            try
+            {
+                while (!this.streamReader.EndOfStream && this.IsConnected)
+                {
+                    this.processOutput(this.streamReader.ReadLine());
+                }
+            }
+            catch (ThreadAbortException)
+            { }
+            catch (Exception fail)
+            {
+                __evt_Exception(fail);
+            }
+            ThreadPool.UnregisterThis();
+            this.ProviderThread = null;
+            this.kill();
+            // if we auto reconnect let's do that
+            if (this.autoconn && !this.disconnecting)
+                this.Connect();
         }
 
         public bool Subscribe(string wiki)
@@ -374,6 +380,11 @@ namespace XmlRcs
             return true;
         }
 
+        /// <summary>
+        /// Remove a subscription to a site
+        /// </summary>
+        /// <param name="wiki"></param>
+        /// <returns></returns>
         public bool Unsubscribe(string wiki)
         {
             if (!this.isConnected())
@@ -397,6 +408,8 @@ namespace XmlRcs
             this.streamReader = null;
             this.streamWriter = null;
             this.client = null;
+            ThreadPool.KillThread(this.ProviderThread);
+            this.ProviderThread = null;
         }
 
         /// <summary>
@@ -404,11 +417,16 @@ namespace XmlRcs
         /// </summary>
         public void Disconnect()
         {
+            this.disconnecting = true;
             if (!this.IsConnected)
+            {
+                this.disconnecting = false;
                 return;
-
+            }
+            
             this.send("exit");
             this.kill();
+            this.disconnecting = false;
         }
 
         public bool Reconnect()
