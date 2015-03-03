@@ -11,7 +11,7 @@ function insert2redis(wiki, xml) {
 }
 
 function quoteattr(xml) {
-    var escaped = xml.replace('"', '&quot;').replace("'", '&apos;').replace("\n", " ");
+    var escaped = xml.replace('"', '&quot;').replace("'", '&apos;').replace("\n", " ").replace("<", "&lt;").replace(">", "&gt;");
     return '"' + escaped + '"';
 }
   
