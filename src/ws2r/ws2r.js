@@ -64,6 +64,5 @@ socket.on( 'change', function ( data ) {
      xml += 'length_old=' + quoteattr(length_o.toString()) + ' ';
      xml += 'timestamp=' + quoteattr(data.timestamp.toString()) + '>';
      xml += '</edit>';
-     console.log(xml);
-     //insert2redis(data.server_name, xml);
+     insert2redis(data.server_name, xml);
 } );
