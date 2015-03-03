@@ -1,9 +1,12 @@
 #!/usr/bin/python
+import sys
 import logging
 import socketIO_client
 import json
 import redis
 from xml.sax.saxutils import quoteattr
+
+#logging.basicConfig(level='DEBUG')
 
 rs = redis.Redis('localhost') 
 
@@ -48,8 +51,10 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         insert_to_redis(change['server_name'], result)
 #        print '%(user)s edited %(title)s' % change
     def on_reconnect(self, *args):
+        print("Reconnecting")
         self.emit('subscribe', '*') 
     def on_connect(self):
+        print("Connecting")
         self.emit('subscribe', '*')
  
  
