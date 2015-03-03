@@ -20,11 +20,11 @@ function my_replace(text, what_to_replace, with_what)
 }
 
 function quoteattr(xml) {
-    var escaped = my_replace(xml, "\"", '&quot;');
+    var escaped = my_replace(xml, '"', '&quot;');
     escaped = my_replace(escaped, "'", '&apos;');
     escaped = my_replace(escaped, "\n", " ");
     escaped = my_replace(escaped, "<", "&lt;");
-    escaped = my_replace(">", "&gt;");
+    escaped = my_replace(escaped, ">", "&gt;");
     return '"' + escaped + '"';
 }
   
