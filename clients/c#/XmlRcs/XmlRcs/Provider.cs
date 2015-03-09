@@ -93,12 +93,12 @@ namespace XmlRcs
         private NetworkStream networkStream = null;
         private TcpClient client = null;
         private DateTime lastPing;
-        private System.Threading.Timer timer = null;
         private List<string> lSubscriptions = null;
         private bool autoconn;
         public bool AutoResubscribe;
         private bool disconnecting = false;
         private Thread ProviderThread = null;
+        private Thread Pinger = null;
 
         public delegate void EditHandler(object sender, EditEventArgs args);
         public delegate void TimeoutErrorHandler(object sender, EventArgs args);
@@ -156,9 +156,10 @@ namespace XmlRcs
             // clean up some resources - this will ensure that all references to thread will be removed
             this.Disconnect();
             ThreadPool.KillThread(this.ProviderThread);
+            ThreadPool.KillThread(this.Pinger);
         }
 
-        private void ping(object state)
+        private void ping()
         {
             this.send("ping");
         }
@@ -321,6 +322,26 @@ namespace XmlRcs
             }
         }
 
+        private void Pinger_Exec()
+        {
+            try
+            {
+                while (IsConnected)
+                {
+                    this.ping();
+                    Thread.Sleep(Configuration.PingWait * 1000);
+                }
+            }
+            catch (ThreadAbortException)
+            {
+            }
+            catch (Exception fail)
+            {
+                this.__evt_Exception(fail);
+            }
+            ThreadPool.UnregisterThis();
+        }
+
         /// <summary>
         /// Connect to XmlRcs server, this function needs to be called before you can start subscribing to changes on wiki
         /// </summary>
@@ -347,14 +368,17 @@ namespace XmlRcs
                     this.send("S " + item);
                 }
             }
-            this.ProviderThread = new Thread(loop);
+            this.ProviderThread = new Thread(Provider_Exec);
             this.ProviderThread.Name = "XmlRcs/Provider/" + Configuration.Server;
             this.ProviderThread.Start();
-            this.timer = new System.Threading.Timer(ping, null, Configuration.PingWait * 1000, Configuration.PingWait * 1000);
+            this.Pinger = new Thread(Pinger_Exec);
+            this.Pinger.Start();
+            ThreadPool.RegisterThread(this.Pinger);
+            ThreadPool.RegisterThread(this.ProviderThread);
             return true;
         }
 
-        private void loop()
+        private void Provider_Exec()
         {
             try
             {
@@ -377,6 +401,11 @@ namespace XmlRcs
                 this.Connect();
         }
 
+        /// <summary>
+        /// Subscribe to a wiki, you can also use a magic word "all" in order to subscribe to all wikis
+        /// </summary>
+        /// <param name="wiki"></param>
+        /// <returns></returns>
         public bool Subscribe(string wiki)
         {
             if (!this.isConnected())
@@ -388,7 +417,8 @@ namespace XmlRcs
         }
 
         /// <summary>
-        /// Remove a subscription to a site
+        /// Remove a subscription to a site, if you use magic word "all" you will remove subscription to "all wikis" except wikis you explicitly requested
+        /// in a separate "Subscribe" calls
         /// </summary>
         /// <param name="wiki"></param>
         /// <returns></returns>
@@ -404,11 +434,6 @@ namespace XmlRcs
 
         private void kill()
         {
-            if (this.timer != null)
-            {
-                this.timer.Dispose();
-                this.timer = null;
-            }
             if (this.client != null)
                 this.client.Close();
             this.networkStream = null;
@@ -416,6 +441,7 @@ namespace XmlRcs
             this.streamWriter = null;
             this.client = null;
             ThreadPool.KillThread(this.ProviderThread);
+            ThreadPool.KillThread(this.Pinger);
             this.ProviderThread = null;
         }
 
@@ -430,12 +456,15 @@ namespace XmlRcs
                 this.disconnecting = false;
                 return;
             }
-            
             this.send("exit");
             this.kill();
             this.disconnecting = false;
         }
 
+        /// <summary>
+        /// Reconnect to XmlRcs server, alias to Disconnect and Connect
+        /// </summary>
+        /// <returns></returns>
         public bool Reconnect()
         {
             this.Disconnect();
