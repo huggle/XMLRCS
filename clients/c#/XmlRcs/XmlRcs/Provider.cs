@@ -93,7 +93,7 @@ namespace XmlRcs
         private NetworkStream networkStream = null;
         private TcpClient client = null;
         private DateTime lastPing;
-        private List<string> lSubscriptions = null;
+        private List<string> lSubscriptions = new List<string>();
         private bool autoconn;
         public bool AutoResubscribe;
         private bool disconnecting = false;
@@ -352,7 +352,6 @@ namespace XmlRcs
                 return false;
 
             this.lastPing = DateTime.Now;
-            this.lSubscriptions = new List<string>();
             this.client = new TcpClient(Configuration.Server, Configuration.Port);
             this.networkStream = this.client.GetStream();
             this.streamReader = new StreamReader(this.networkStream, Encoding.UTF8);
