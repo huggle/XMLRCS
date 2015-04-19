@@ -59,7 +59,7 @@ void Server::Listen()
         int connFd = accept(this->ListenerFd, (struct sockaddr *)&clntAdd, &len);
         if (connFd < 0)
         {
-            std::cerr << "Cannot accept connection" << std::endl;
+            std::cerr << "Cannot accept connection: " << strerror(errno) << std::endl;
             continue;
         }
         //fcntl(connFd, F_SETFL, O_NONBLOCK);
