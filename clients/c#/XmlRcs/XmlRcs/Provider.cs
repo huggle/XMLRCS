@@ -93,7 +93,7 @@ namespace XmlRcs
         private NetworkStream networkStream = null;
         private TcpClient client = null;
         private DateTime lastPing;
-        private List<string> lSubscriptions = null;
+        private List<string> lSubscriptions = new List<string>();
         private bool autoconn;
         public bool AutoResubscribe;
         private bool disconnecting = false;
@@ -352,11 +352,10 @@ namespace XmlRcs
                 return false;
 
             this.lastPing = DateTime.Now;
-            this.lSubscriptions = new List<string>();
             this.client = new TcpClient(Configuration.Server, Configuration.Port);
             this.networkStream = this.client.GetStream();
             this.streamReader = new StreamReader(this.networkStream, Encoding.UTF8);
-            this.streamWriter = new StreamWriter(this.networkStream, Encoding.UTF8);
+            this.streamWriter = new StreamWriter(this.networkStream, Encoding.ASCII);
             this.streamWriter.AutoFlush = true;
             // there is some weird bug in .Net that put garbage to first packet that is sent out
             // this is a dummy line that will flush out that garbage

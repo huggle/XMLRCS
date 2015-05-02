@@ -19,6 +19,8 @@ Please see https://wikitech.wikimedia.org/wiki/XmlRcs
 Technical details
 =================
 
+Incoming text should be encoded in ASCII (it contains only URL's so it shouldn't be a problem) while outgoing text produced by XmlRcs is UTF8. This will likely change in a future and all text will be UTF8.
+
 This XML system contains of 3 components:
 
 * Convertor written in python which connects to WMF feed and push data to redis (pretty simple thing)
