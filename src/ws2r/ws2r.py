@@ -46,6 +46,15 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         result += 'type=' + quoteattr(change['type']) + ' '
         result += 'length_new="' + str(length_n) + '" '
         result += 'length_old="' + str(length_o) + '" '
+        if (change['type'] == 'log'):
+            if ('log_id' in change):
+                result += 'log_id=' + str(change['log_id']) + ' '
+            if ('log_type' in change):
+                result += 'log_type=' + quoteattr(change['log_type']) + ' '
+            if ('log_action' in change):
+                result += 'log_action=' + quoteattr(change['log_action']) + ' '
+            if ('log_action_comment' in change):
+                result += 'log_action_comment=' + quoteattr(change['log_action_comment']) + ' '
         result += 'timestamp="' + str(change['timestamp']) + '">'
         result += '</edit>'
         insert_to_redis(change['server_name'], result)
