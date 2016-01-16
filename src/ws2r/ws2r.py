@@ -48,7 +48,7 @@ class WikiNamespace(socketIO_client.BaseNamespace):
         result += 'length_old="' + str(length_o) + '" '
         if (change['type'] == 'log'):
             if ('log_id' in change):
-                result += 'log_id=' + str(change['log_id']) + ' '
+                result += 'log_id="' + str(change['log_id']) + '" '
             if ('log_type' in change):
                 result += 'log_type=' + quoteattr(change['log_type']) + ' '
             if ('log_action' in change):
