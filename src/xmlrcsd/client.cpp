@@ -232,7 +232,10 @@ int Client::Unsubscribe(std::string wiki)
                                                             this->Subscriptions.end(),
                                                             wiki);
     if (position == this->Subscriptions.end())
+    {
+        pthread_mutex_unlock(&this->subscriptions_lock);
         return ENOTEXIST;
+    }
     this->Subscriptions.erase(position);
     pthread_mutex_unlock(&this->subscriptions_lock);
     return 0;
