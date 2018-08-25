@@ -10,7 +10,7 @@
 
 #include "configuration.hpp"
 
-const std::string Configuration::version = "1.0.4";
+const std::string Configuration::version = "1.0.5";
 bool         Configuration::daemon = false;
 std::string  Configuration::redis_host = "localhost";
 unsigned int Configuration::redis_port = 6379;
@@ -18,6 +18,7 @@ unsigned long Configuration::total_conn = 0;
 unsigned long Configuration::total_io = 0;
 int          Configuration::last_io = 0;
 std::string  Configuration::redis_pref = "";
+bool         Configuration::auto_kill = true;
 int          Configuration::debugging_level = 0;
 int          Configuration::port = 8822;
 time_t       Configuration::startup_time;

@@ -13,6 +13,8 @@
 #include <stdexcept>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
 #include "configuration.hpp"
@@ -155,7 +157,26 @@ int main(int argc, char *argv[])
                             pthread_mutex_lock(&Client::clients_lock);
                             for (std::vector<Client*>::size_type i = 0; i != Client::clients.size(); i++)
                             {
-                                Client::clients[i]->SendLine("<fatal>redis is empty for 10 seconds</fatal>");
+                                if (Configuration::auto_kill)
+                                    Client::clients[i]->SendLine("<warning>redis is empty for 10 seconds, restarting the daemon to fix</warning>");
+                                else
+                                    Client::clients[i]->SendLine("<fatal>redis is empty for 10 seconds</fatal>");
+                            }
+                            if (Configuration::auto_kill)
+                            {
+                                // Find the pid of es2r daemon
+                                redisReply *k_pid = (redisReply*)redisCommand(redis_context, "GET es2r.pid");
+                                if (k_pid->type == REDIS_REPLY_STRING)
+                                {
+                                    // For some reason this is always string, so let's convert it
+                                    long es2r_pid = strtol(k_pid->str, NULL, 10);
+                                    if (es2r_pid > 0)
+                                    {
+                                        Log("Restarting es2r daemon, because it seems stuck");
+                                        kill((pid_t)es2r_pid, SIGKILL);
+                                    }
+                                }
+                                freeReplyObject(k_pid);
                             }
                         }
                         pthread_mutex_unlock(&Client::clients_lock);

@@ -41,6 +41,9 @@ bool TP::ProcessArgs()
                     case 'd':
                         Configuration::daemon = true;
                         break;
+                    case 'n':
+                        Configuration::auto_kill = false;
+                        break;
                     case 'v':
                         Debug();
                         break;

@@ -28,6 +28,7 @@ class Configuration
         static unsigned long  total_conn;
         static unsigned long  total_io;
         static time_t       startup_time;
+        static bool         auto_kill;
 };
 
 #endif
