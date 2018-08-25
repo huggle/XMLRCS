@@ -4,11 +4,16 @@ import pprint
 import logging
 import json
 import redis
+import os
 from sseclient import SSEClient as EventSource
 from xml.sax.saxutils import quoteattr
 
 url = 'https://stream.wikimedia.org/v2/stream/recentchange'
 rs = redis.Redis('localhost')
+
+# Store pid of this daemon so that we can easily kill it in case we start
+# hitting https://phabricator.wikimedia.org/T179986
+rs.set("es2r.pid", os.getpid())
 
 def insert_to_redis(wiki, xml):
     result = wiki + "|" + xml
@@ -63,3 +68,4 @@ for event in EventSource(url):
             result += 'timestamp="' + str(change['timestamp']) + '">'
             result += '</edit>'
             insert_to_redis(change['server_name'], result)
+
