@@ -162,6 +162,7 @@ int main(int argc, char *argv[])
                                 else
                                     Client::clients[i]->SendLine("<fatal>redis is empty for 10 seconds</fatal>");
                             }
+                            pthread_mutex_unlock(&Client::clients_lock);
                             if (Configuration::auto_kill)
                             {
                                 // Find the pid of es2r daemon
@@ -173,13 +174,13 @@ int main(int argc, char *argv[])
                                     if (es2r_pid > 0)
                                     {
                                         Log("Restarting es2r daemon, because it seems stuck");
-                                        kill((pid_t)es2r_pid, SIGKILL);
+                                        if (kill((pid_t)es2r_pid, SIGKILL) != 0)
+                                            Log("Failed to kill es2r daemon");
                                     }
                                 }
                                 freeReplyObject(k_pid);
                             }
                         }
-                        pthread_mutex_unlock(&Client::clients_lock);
                         usleep(100000);
                     }
                     freeReplyObject(reply);
