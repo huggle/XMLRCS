@@ -13,7 +13,7 @@ rs = redis.Redis('localhost')
 
 # Store pid of this daemon so that we can easily kill it in case we start
 # hitting https://phabricator.wikimedia.org/T179986
-rs.set("es2r.pid", os.getpid())
+rs.set("es2r.pid", int(os.getpid()))
 
 def insert_to_redis(wiki, xml):
     result = wiki + "|" + xml
@@ -35,14 +35,16 @@ for event in EventSource(url):
             old = ''
             if ('revision' in change):
                 rev_id = 'revid="' + str(change['revision']['new']) + '" '
-                old = 'oldid="' + str(change['revision']['old']) + '" '
+                if ('old' in change['revision']):
+                    old = 'oldid="' + str(change['revision']['old']) + '" '
             if ('patrolled' in change):
                 patrolled = change['patrolled']
             if ('minor' in change):
                 minor = change['minor']
             if ('length' in change):
                 length_n = change['length']['new']
-                length_o = change['length']['old']
+                if ('old' in change['length']):
+                    length_o = change['length']['old']
             result = '<edit wiki="' + change['wiki'] + '" '
             result += 'server_name="' + change['server_name'] + '" '
             result += rev_id + old
