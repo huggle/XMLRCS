@@ -1,0 +1,27 @@
+[Unit]
+Description=EventStream to Redis - XMLRCS EventStream connector
+Documentation=https://wikitech.wikimedia.org/wiki/XmlRcs
+Requires=redis-server.service
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=xmlrcs
+Group=xmlrcs
+WorkingDirectory=/opt/xmlrcs
+ExecStart=/usr/bin/python3 /opt/xmlrcs/src/es2r/es2r.py
+Restart=on-failure
+RestartSec=30s
+# Give the service time to reconnect if EventStream is temporarily down
+TimeoutStopSec=30
+# Environment variables if needed
+#Environment=PYTHONPATH=/opt/xmlrcs
+
+# Security hardening
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
