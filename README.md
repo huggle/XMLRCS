@@ -1,28 +1,27 @@
 XMLRCS
 ======
 
-Recent changes xml stream for MediaWiki websites.
+Recent changes XML stream for MediaWiki websites.
 
-This is a simple TCP/IP provider of recent changes for MediaWiki. It basically takes the extremely complicated WebSocket IO JSON provider that is now supported by WMF and push the data to redis in XML format. The daemon (xmlrcsd) is then listening on port 8822 for any incoming connections and allow them to retrieve the stream in a simple way that can be easily parsed in any programming language with no need to support WebSockets or JSON.
+This is a simple TCP/IP provider of recent changes for MediaWiki. It fetches data from Wikimedia's EventStream API, converts the JSON data to XML format, and pushes it to Redis. The daemon (xmlrcsd) then listens on port 8822 for incoming connections and allows clients to retrieve the stream in a simple format that can be easily parsed in any programming language without needing to support EventStream or JSON.
 
-There is working instance at huggle-rc.wmflabs.org which you can try yourself, listening on port 8822
+There is a working instance at huggle-rc.wmflabs.org which you can try yourself, listening on port 8822:
 
-For example:
 ```
 telnet huggle-rc.wmflabs.org 8822
 S all
 exit
 ```
 
-Please see https://wikitech.wikimedia.org/wiki/XmlRcs
+Please see https://wikitech.wikimedia.org/wiki/XmlRcs for more information.
 
 Technical details
 =================
 
-Incoming text should be encoded in ASCII (it contains only URL's so it shouldn't be a problem) while outgoing text produced by XmlRcs is UTF8. This will likely change in a future and all text will be UTF8.
+Outgoing text produced by XmlRcs is UTF-8 encoded, allowing for proper handling of international characters.
 
-This XML system contains of 3 components:
+This XML system consists of 3 components:
 
-* Convertor written in python which connects to WMF feed and push data to redis (pretty simple thing)
-* Redis server
-* Daemon written in C++ which handles the incoming connections (high speed, resource effective)
+* **es2r (EventStream to Redis)**: A Python script that connects to Wikimedia's EventStream API, processes the recent changes, converts them to XML format, and pushes them to Redis. Features automatic reconnection, error handling, and monitoring capabilities.
+* **Redis server**: Acts as a message queue between the EventStream connector and the TCP server.
+* **xmlrcsd**: A high-performance C++ daemon that handles incoming client connections and serves the XML stream to clients.
