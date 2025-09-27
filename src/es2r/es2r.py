@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
 es2r.py - Event Stream to Redis converter for XMLRCS
 
@@ -19,8 +19,8 @@ import traceback
 from datetime import datetime
 from sseclient import SSEClient as EventSource
 from xml.sax.saxutils import quoteattr
-from urllib.error import URLError
-from requests.exceptions import RequestException
+from urllib.error import URLError, HTTPError
+from requests.exceptions import RequestException, HTTPError as RequestsHTTPError
 
 # Set up logging
 logging.basicConfig(
@@ -36,6 +36,7 @@ logger = logging.getLogger('es2r')
 # Default configuration
 DEFAULT_CONFIG = {
     'event_stream_url': 'https://stream.wikimedia.org/v2/stream/recentchange',
+    'user_agent': 'XmlRcs/1.0 (https://github.com/huggle/XmlRcs) es2r-daemon',
     'redis_host': 'localhost',
     'redis_port': 6379,
     'redis_db': 0,
@@ -195,6 +196,10 @@ class EventStreamToRedis:
         """Process a single event from the stream."""
         if event.event != 'message':
             return
+        
+        # Skip empty or whitespace-only data
+        if not event.data or not event.data.strip():
+            return
             
         try:
             change = json.loads(event.data)
@@ -210,6 +215,7 @@ class EventStreamToRedis:
                 
         except ValueError as e:
             logger.warning(f"Invalid JSON in event data: {e}")
+            logger.debug(f"Event type: {event.event}, Event data: '{event.data[:200]}...' (truncated)")
         except Exception as e:
             logger.error(f"Error processing event: {e}")
             logger.debug(traceback.format_exc())
@@ -219,9 +225,32 @@ class EventStreamToRedis:
         try:
             logger.info(f"Connecting to EventStream at {self.config['event_stream_url']}")
             self.connect_attempt += 1
-            self.event_source = EventSource(self.config['event_stream_url'])
+            
+            # Set proper headers for Wikimedia EventStream API
+            headers = {
+                'User-Agent': self.config['user_agent'],
+                'Accept': 'text/event-stream',
+                'Cache-Control': 'no-cache'
+            }
+            
+            logger.debug(f"Using headers: {headers}")
+            self.event_source = EventSource(self.config['event_stream_url'], headers=headers)
             self.connect_attempt = 0  # Reset on successful connection
             return True
+        except (HTTPError, RequestsHTTPError) as e:
+            delay = min(
+                self.config['reconnect_delay'] * (2 ** min(self.connect_attempt, 6)),
+                self.config['max_reconnect_delay']
+            )
+            if hasattr(e, 'code'):
+                status_code = e.code
+            elif hasattr(e, 'response') and e.response is not None:
+                status_code = e.response.status_code
+            else:
+                status_code = "unknown"
+            logger.error(f"HTTP error connecting to EventStream (status {status_code}): {e}. Check User-Agent header. Retrying in {delay} seconds...")
+            logger.debug(f"Using User-Agent: {self.config['user_agent']}")
+            time.sleep(delay)
         except (URLError, RequestException, ConnectionError, socket.error) as e:
             delay = min(
                 self.config['reconnect_delay'] * (2 ** min(self.connect_attempt, 6)),
@@ -285,6 +314,7 @@ def parse_arguments():
     parser.add_argument('--redis-db', type=int, default=0, help='Redis database')
     parser.add_argument('--redis-key', default='rc', help='Redis key for pushing data')
     parser.add_argument('--url', default=DEFAULT_CONFIG['event_stream_url'], help='EventStream URL')
+    parser.add_argument('--user-agent', default=DEFAULT_CONFIG['user_agent'], help='User-Agent header for EventStream requests')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     return parser.parse_args()
 
@@ -298,6 +328,7 @@ if __name__ == '__main__':
     # Create configuration from arguments
     config = {
         'event_stream_url': args.url,
+        'user_agent': args.user_agent,
         'redis_host': args.redis_host,
         'redis_port': args.redis_port,
         'redis_db': args.redis_db,
