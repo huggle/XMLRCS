@@ -36,14 +36,18 @@ logger = logging.getLogger('es2r')
 # Default configuration
 DEFAULT_CONFIG = {
     'event_stream_url': 'https://stream.wikimedia.org/v2/stream/recentchange',
-    'user_agent': 'XmlRcs/1.0 (https://github.com/huggle/XmlRcs) es2r-daemon',
+    'user_agent': 'XmlRcs/1.0 (https://github.com/huggle/XMLRCS) es2r-daemon',
     'redis_host': 'localhost',
     'redis_port': 6379,
     'redis_db': 0,
     'redis_key': 'rc',
     'heartbeat_interval': 60,  # seconds
     'reconnect_delay': 5,      # seconds
-    'max_reconnect_delay': 300 # seconds
+    'max_reconnect_delay': 300, # seconds
+    'max_consecutive_errors': 10, # reconnect after this many consecutive errors
+    'max_error_rate': 0.5,     # reconnect if error rate exceeds this (errors/events)
+    'error_rate_window': 100,  # number of events to calculate error rate over
+    'forced_reconnect_interval': 86400  # force reconnection every 24 hours
 }
 
 class EventStreamToRedis:
@@ -62,6 +66,12 @@ class EventStreamToRedis:
         self.events_processed = 0
         self.started_at = time.time()
         self.connect_attempt = 0
+        
+        # Connection health tracking
+        self.consecutive_errors = 0
+        self.recent_errors = []  # Track recent errors for rate calculation
+        self.recent_events = []  # Track recent events for rate calculation
+        self.connection_started_at = None
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -105,12 +115,59 @@ class EventStreamToRedis:
         self.redis_client.set("es2r.last_event", int(self.last_event_time))
         self.redis_client.set("es2r.events_processed", self.events_processed)
         self.redis_client.set("es2r.uptime", int(current_time - self.started_at))
+        self.redis_client.set("es2r.consecutive_errors", self.consecutive_errors)
         
         # Check if connection might be stalled
         if time_since_last_event > self.config['heartbeat_interval'] * 2:
             logger.warning(f"No events received for {time_since_last_event:.1f} seconds. Connection may be stalled.")
             return False
+            
+        # Check if we need a forced reconnection (every 24 hours)
+        if self.config['forced_reconnect_interval'] > 0 and self.connection_started_at and (current_time - self.connection_started_at) > self.config['forced_reconnect_interval']:
+            logger.info(f"Forcing reconnection after {(current_time - self.connection_started_at)/3600:.1f} hours uptime")
+            return False
+            
         return True
+    
+    def record_error(self):
+        """Record an error and check if we should reconnect."""
+        current_time = time.time()
+        self.consecutive_errors += 1
+        self.recent_errors.append(current_time)
+        
+        # Keep only recent errors within the window
+        cutoff_time = current_time - 60  # Keep last minute of errors
+        self.recent_errors = [t for t in self.recent_errors if t > cutoff_time]
+        
+        # Check consecutive error threshold
+        if self.consecutive_errors >= self.config['max_consecutive_errors']:
+            logger.error(f"Reached {self.consecutive_errors} consecutive errors. Forcing reconnection.")
+            return True
+            
+        # Check error rate if we have enough events
+        if len(self.recent_events) >= 10:
+            # Keep only recent events within the window
+            cutoff_time = current_time - 60
+            self.recent_events = [t for t in self.recent_events if t > cutoff_time]
+            
+            # Calculate error rate over recent window
+            if len(self.recent_events) > 0:
+                error_rate = len(self.recent_errors) / (len(self.recent_events) + len(self.recent_errors))
+                if error_rate > self.config['max_error_rate']:
+                    logger.error(f"Error rate {error_rate:.2%} exceeds threshold {self.config['max_error_rate']:.2%}. Forcing reconnection.")
+                    return True
+        
+        return False
+    
+    def record_success(self):
+        """Record a successful event processing."""
+        current_time = time.time()
+        self.consecutive_errors = 0  # Reset on success
+        self.recent_events.append(current_time)
+        
+        # Keep only recent events within the window
+        cutoff_time = current_time - 60
+        self.recent_events = [t for t in self.recent_events if t > cutoff_time]
         
     def insert_to_redis(self, wiki, xml):
         """Insert XML data into Redis."""
@@ -134,6 +191,14 @@ class EventStreamToRedis:
     def format_xml(self, change):
         """Format a change event as XML."""
         try:
+            # Validate critical fields first
+            if 'wiki' not in change:
+                logger.error(f"Missing critical field 'wiki' in change data. Keys present: {list(change.keys())}")
+                return None
+            if 'server_name' not in change:
+                logger.error(f"Missing critical field 'server_name' in change data")
+                return None
+                
             rev_id = ''
             patrolled = False
             length_n = 0
@@ -212,13 +277,27 @@ class EventStreamToRedis:
             xml = self.format_xml(change)
             if xml:
                 self.insert_to_redis(change['server_name'], xml)
+                self.record_success()  # Record successful processing
+            else:
+                # format_xml returned None due to missing critical fields
+                if self.record_error():
+                    raise ConnectionError("Too many formatting errors, reconnecting")
                 
         except ValueError as e:
             logger.warning(f"Invalid JSON in event data: {e}")
-            logger.debug(f"Event type: {event.event}, Event data: '{event.data[:200]}...' (truncated)")
+            logger.debug(f"Event type: {event.event}, Event data: '{event.data[:200] if len(event.data) > 200 else event.data}...' (truncated)")
+            # JSON parsing errors indicate corrupted stream
+            if self.record_error():
+                raise ConnectionError("Too many JSON parsing errors, reconnecting")
+        except KeyError as e:
+            logger.error(f"Missing key in event: {e}")
+            if self.record_error():
+                raise ConnectionError("Too many missing key errors, reconnecting")
         except Exception as e:
             logger.error(f"Error processing event: {e}")
             logger.debug(traceback.format_exc())
+            if self.record_error():
+                raise ConnectionError("Too many processing errors, reconnecting")
             
     def connect_to_event_stream(self):
         """Connect to the EventStream service."""
@@ -236,6 +315,11 @@ class EventStreamToRedis:
             logger.debug(f"Using headers: {headers}")
             self.event_source = EventSource(self.config['event_stream_url'], headers=headers)
             self.connect_attempt = 0  # Reset on successful connection
+            self.connection_started_at = time.time()  # Track connection start time
+            self.consecutive_errors = 0  # Reset error counters
+            self.recent_errors = []
+            self.recent_events = []
+            logger.info("Successfully connected to EventStream")
             return True
         except (HTTPError, RequestsHTTPError) as e:
             delay = min(
@@ -281,7 +365,7 @@ class EventStreamToRedis:
                     if time.time() >= next_heartbeat:
                         if not self.heartbeat():
                             # Connection might be stalled, reconnect
-                            logger.info("Reconnecting due to possible stalled connection")
+                            logger.info("Reconnecting due to possible stalled connection or forced reconnection interval")
                             self.event_source = None
                             break
                         next_heartbeat = time.time() + self.config['heartbeat_interval']
@@ -291,17 +375,22 @@ class EventStreamToRedis:
                         event = next(event_iterator)
                         self.process_event(event)
                     except StopIteration:
-                        logger.warning("EventStream connection closed")
+                        logger.warning("EventStream connection closed by server")
+                        self.event_source = None
+                        break
+                    except ConnectionError as e:
+                        # Raised by process_event when error threshold exceeded
+                        logger.error(f"Connection quality degraded: {e}")
                         self.event_source = None
                         break
                     
             except (URLError, RequestException, ConnectionError, socket.error) as e:
-                logger.error(f"Connection error: {e}")
+                logger.error(f"Connection error in main loop: {e}")
                 self.event_source = None
                 time.sleep(self.config['reconnect_delay'])
                 
             except Exception as e:
-                logger.error(f"Unexpected error: {e}")
+                logger.error(f"Unexpected error in main loop: {e}")
                 logger.debug(traceback.format_exc())
                 self.event_source = None
                 time.sleep(self.config['reconnect_delay'])
