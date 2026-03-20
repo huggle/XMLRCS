@@ -1,0 +1,24 @@
+[Unit]
+Description=XMLRCS EventStreams to Redis feeder
+Documentation=https://wikitech.wikimedia.org/wiki/XmlRcs
+Wants=network-online.target redis-server.service
+After=network-online.target redis-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/libexec/xmlrcs/es2r.py
+Restart=on-failure
+RestartSec=5s
+DynamicUser=true
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

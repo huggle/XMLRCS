@@ -1,0 +1,16 @@
+/build/
+/packaging/output/
+
+/*.deb
+/*.build
+/*.buildinfo
+/*.changes
+
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/files
+/debian/*.debhelper
+/debian/*.substvars
+/debian/tmp/
+/debian/*/
+!/debian/source/

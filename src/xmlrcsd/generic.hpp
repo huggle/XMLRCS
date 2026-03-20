@@ -14,14 +14,21 @@
 #include <sstream>
 #include <string>
 
-#define SSTR( x ) dynamic_cast< std::ostringstream & >( \
-        ( std::ostringstream() << std::dec << x ) ).str()
-
 namespace Generic
 {
+    template<typename T>
+    std::string ToString(const T &input)
+    {
+        std::ostringstream stream;
+        stream << std::dec << input;
+        return stream.str();
+    }
+
     void Debug(std::string text);
     std::string IntToStdString(int input);
     void Log(std::string text);
 }
+
+#define SSTR(x) Generic::ToString(x)
 
 #endif // GENERIC_HPP

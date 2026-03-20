@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_build:
+	cmake -S src/xmlrcsd -B build/xmlrcsd -DCMAKE_BUILD_TYPE=Release
+	cmake --build build/xmlrcsd --parallel
+
+override_dh_auto_install:
+	install -Dm755 build/xmlrcsd/xmlrcsd debian/xmlrcsd/usr/bin/xmlrcsd
+	install -Dm755 src/es2r/es2r.py debian/es2r/usr/libexec/xmlrcs/es2r.py
+
+override_dh_auto_clean:
+	rm -rf build/xmlrcsd
+
+override_dh_python3:

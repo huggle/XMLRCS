@@ -1,0 +1,5 @@
+xmlrcs (1.0.5-1) unstable; urgency=medium
+
+  * Initial Debian packaging.
+
+ -- Petr Bena <petr@localhost>  Fri, 20 Mar 2026 23:30:00 +0100

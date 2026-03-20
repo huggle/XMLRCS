@@ -1,0 +1,24 @@
+[Unit]
+Description=XMLRCS XML Recent Changes Stream server
+Documentation=https://wikitech.wikimedia.org/wiki/XmlRcs
+Wants=network-online.target redis-server.service es2r.service
+After=network-online.target redis-server.service es2r.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/xmlrcsd
+Restart=on-failure
+RestartSec=5s
+DynamicUser=true
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

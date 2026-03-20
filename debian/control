@@ -1,0 +1,27 @@
+Source: xmlrcs
+Section: net
+Priority: optional
+Maintainer: Petr Bena <petr@localhost>
+Build-Depends: debhelper-compat (= 13),
+ cmake,
+ dh-python,
+ g++,
+ pkgconf,
+ python3-all
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://wikitech.wikimedia.org/wiki/XmlRcs
+
+Package: xmlrcsd
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, redis-server
+Description: XML recent changes TCP server daemon
+ xmlrcsd serves the XMLRCS recent changes stream to TCP clients.
+ It consumes XML items from Redis and exposes them on port 8822.
+
+Package: es2r
+Architecture: all
+Depends: ${misc:Depends}, python3, python3-redis, python3-requests, python3-sseclient, redis-server
+Description: EventStreams to Redis feeder for XMLRCS
+ es2r connects to Wikimedia EventStreams, converts recent changes to XML,
+ and pushes them into Redis for consumption by xmlrcsd.
