@@ -30,10 +30,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger('es2r')
 
+VERSION = '1.0.0'
+
 # Default configuration
 DEFAULT_CONFIG = {
     'event_stream_url': 'https://stream.wikimedia.org/v2/stream/recentchange',
-    'user_agent': 'XmlRcs/1.0 (https://github.com/huggle/XMLRCS) es2r-daemon',
+    'user_agent': f'XmlRcs/{VERSION} (https://github.com/huggle/XMLRCS) es2r-daemon',
     'redis_host': 'localhost',
     'redis_port': 6379,
     'redis_db': 0,
@@ -395,6 +397,7 @@ class EventStreamToRedis:
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Event Stream to Redis converter for XMLRCS')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
     parser.add_argument('--redis-host', default='localhost', help='Redis host')
     parser.add_argument('--redis-port', type=int, default=6379, help='Redis port')
     parser.add_argument('--redis-db', type=int, default=0, help='Redis database')
