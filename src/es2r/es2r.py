@@ -16,6 +16,7 @@ import socket
 import signal
 import argparse
 import traceback
+import threading
 from datetime import datetime
 from sseclient import SSEClient as EventSource
 from xml.sax.saxutils import quoteattr
@@ -46,7 +47,10 @@ DEFAULT_CONFIG = {
     'max_consecutive_errors': 10, # reconnect after this many consecutive errors
     'max_error_rate': 0.5,     # reconnect if error rate exceeds this (errors/events)
     'error_rate_window': 100,  # number of events to calculate error rate over
-    'forced_reconnect_interval': 86400  # force reconnection every 24 hours
+    'forced_reconnect_interval': 86400,  # force reconnection every 24 hours
+    'watchdog_interval': 5,   # seconds between watchdog checks
+    'watchdog_timeout': 180,  # reconnect if no progress is made for this long
+    'worker_shutdown_timeout': 15  # seconds to wait for worker to stop after reconnect is requested
 }
 
 class EventStreamToRedis:
@@ -61,10 +65,17 @@ class EventStreamToRedis:
         self.redis_client = None
         self.event_source = None
         self.last_event_time = time.time()
+        self.last_progress_time = self.last_event_time
         self.running = True
         self.events_processed = 0
         self.started_at = time.time()
         self.connect_attempt = 0
+        self.watchdog_lock = threading.Lock()
+        self.stream_lock = threading.Lock()
+        self.stream_thread = None
+        self.reconnect_requested = threading.Event()
+        self.reconnect_reason = None
+        self.reconnect_requested_at = None
         
         # Connection health tracking
         self.consecutive_errors = 0
@@ -81,6 +92,9 @@ class EventStreamToRedis:
         
         # Store PID for management
         self.redis_client.set("es2r.pid", int(os.getpid()))
+
+        self.watchdog_thread = threading.Thread(target=self.watchdog_loop, name='es2r-watchdog', daemon=True)
+        self.watchdog_thread.start()
         
     def signal_handler(self, sig, frame):
         """Handle termination signals."""
@@ -89,6 +103,73 @@ class EventStreamToRedis:
         if self.redis_client:
             self.redis_client.delete("es2r.pid")
         sys.exit(0)
+
+    def mark_progress(self):
+        """Record that the stream loop is still making forward progress."""
+        with self.watchdog_lock:
+            self.last_progress_time = time.time()
+
+    def watchdog_loop(self):
+        """Request a reconnect if the stream stops making progress."""
+        while self.running:
+            time.sleep(self.config['watchdog_interval'])
+
+            with self.watchdog_lock:
+                stalled_for = time.time() - self.last_progress_time
+
+            if stalled_for <= self.config['watchdog_timeout']:
+                continue
+
+            self.request_reconnect(f"watchdog detected no stream progress for {stalled_for:.1f} seconds")
+
+    def close_event_stream(self):
+        """Close the active EventStream connection to unblock the worker thread."""
+        with self.stream_lock:
+            event_source = self.event_source
+            self.event_source = None
+
+        if not event_source:
+            return
+
+        try:
+            if hasattr(event_source, 'resp') and event_source.resp is not None:
+                event_source.resp.close()
+        except Exception as e:
+            logger.debug(f"Error while closing EventStream response: {e}")
+
+    def request_reconnect(self, reason):
+        """Ask the worker thread to reconnect its EventStream connection."""
+        if self.reconnect_requested.is_set():
+            return
+
+        logger.warning(f"Requesting EventStream reconnect: {reason}")
+        self.reconnect_reason = reason
+        self.reconnect_requested_at = time.time()
+        self.reconnect_requested.set()
+        self.close_event_stream()
+
+    def force_exit_for_recovery_failure(self, reason):
+        """Exit the process when in-process recovery failed."""
+        logger.critical(f"{reason}. Exiting so the service manager can restart es2r.")
+
+        try:
+            if self.redis_client:
+                self.redis_client.delete("es2r.pid")
+        except redis.RedisError as e:
+            logger.error(f"Failed to clean up Redis PID key during forced exit: {e}")
+
+        os._exit(1)
+
+    def start_stream_worker(self):
+        """Start the background worker that owns the EventStream iterator."""
+        self.stream_thread = threading.Thread(target=self.stream_worker_loop, name='es2r-stream', daemon=True)
+        self.stream_thread.start()
+
+    def clear_reconnect_request(self):
+        """Reset reconnect state after the worker has been replaced."""
+        self.reconnect_requested.clear()
+        self.reconnect_reason = None
+        self.reconnect_requested_at = None
         
     def init_redis(self):
         """Initialize Redis connection."""
@@ -270,6 +351,7 @@ class EventStreamToRedis:
             
             # Update last event time
             self.last_event_time = time.time()
+            self.mark_progress()
             self.events_processed += 1
             
             # Format as XML and insert to Redis
@@ -312,7 +394,10 @@ class EventStreamToRedis:
             }
             
             logger.debug(f"Using headers: {headers}")
-            self.event_source = EventSource(self.config['event_stream_url'], headers=headers)
+            event_source = EventSource(self.config['event_stream_url'], headers=headers)
+            with self.stream_lock:
+                self.event_source = event_source
+            self.mark_progress()
             self.connect_attempt = 0  # Reset on successful connection
             self.connection_started_at = time.time()  # Track connection start time
             self.consecutive_errors = 0  # Reset error counters
@@ -342,57 +427,89 @@ class EventStreamToRedis:
             logger.error(f"Failed to connect to EventStream: {e}. Retrying in {delay} seconds...")
             time.sleep(delay)
             return False
-            
-    def run(self):
-        """Main processing loop."""
-        logger.info("Starting EventStream to Redis converter")
-        
-        next_heartbeat = time.time() + self.config['heartbeat_interval']
-        
+
+    def stream_worker_loop(self):
+        """Consume EventStream messages in a dedicated worker thread."""
         while self.running:
             try:
-                # Try to connect if not connected
-                if not self.event_source:
-                    if not self.connect_to_event_stream():
-                        continue
-                
-                # Process events with timeout check
-                event_iterator = iter(self.event_source)
-                
-                while self.running:
-                    # Check heartbeat
-                    if time.time() >= next_heartbeat:
-                        if not self.heartbeat():
-                            # Connection might be stalled, reconnect
-                            logger.info("Reconnecting due to possible stalled connection or forced reconnection interval")
-                            self.event_source = None
-                            break
-                        next_heartbeat = time.time() + self.config['heartbeat_interval']
-                    
-                    # Get next event with timeout
+                if not self.connect_to_event_stream():
+                    continue
+
+                with self.stream_lock:
+                    event_source = self.event_source
+
+                if not event_source:
+                    continue
+
+                event_iterator = iter(event_source)
+
+                while self.running and not self.reconnect_requested.is_set():
                     try:
                         event = next(event_iterator)
                         self.process_event(event)
                     except StopIteration:
                         logger.warning("EventStream connection closed by server")
-                        self.event_source = None
                         break
                     except ConnectionError as e:
-                        # Raised by process_event when error threshold exceeded
                         logger.error(f"Connection quality degraded: {e}")
-                        self.event_source = None
                         break
-                    
+
             except (URLError, RequestException, ConnectionError, socket.error) as e:
-                logger.error(f"Connection error in main loop: {e}")
-                self.event_source = None
+                logger.error(f"Connection error in stream worker: {e}")
                 time.sleep(self.config['reconnect_delay'])
-                
             except Exception as e:
-                logger.error(f"Unexpected error in main loop: {e}")
+                logger.error(f"Unexpected error in stream worker: {e}")
                 logger.debug(traceback.format_exc())
-                self.event_source = None
                 time.sleep(self.config['reconnect_delay'])
+            finally:
+                self.close_event_stream()
+
+            if self.reconnect_requested.is_set():
+                logger.info("Stream worker stopped for reconnect request")
+                return
+                
+    def run(self):
+        """Main supervisor loop."""
+        logger.info("Starting EventStream to Redis converter")
+        
+        next_heartbeat = time.time() + self.config['heartbeat_interval']
+        self.start_stream_worker()
+        
+        while self.running:
+            if time.time() >= next_heartbeat:
+                try:
+                    if not self.heartbeat():
+                        self.request_reconnect("heartbeat detected stalled connection or forced reconnect interval")
+                    next_heartbeat = time.time() + self.config['heartbeat_interval']
+                except redis.RedisError as e:
+                    logger.error(f"Failed to update heartbeat: {e}")
+                    try:
+                        self.init_redis()
+                    except redis.RedisError:
+                        pass
+
+            if self.reconnect_requested.is_set():
+                if self.stream_thread and self.stream_thread.is_alive():
+                    self.stream_thread.join(timeout=0.1)
+
+                if self.stream_thread and self.stream_thread.is_alive():
+                    stalled_recovery = time.time() - self.reconnect_requested_at
+                    if stalled_recovery > self.config['worker_shutdown_timeout']:
+                        self.force_exit_for_recovery_failure(
+                            f"Worker did not stop {stalled_recovery:.1f} seconds after reconnect was requested"
+                        )
+                else:
+                    logger.info(f"Restarting stream worker after reconnect request: {self.reconnect_reason}")
+                    self.clear_reconnect_request()
+                    self.mark_progress()
+                    self.start_stream_worker()
+
+            elif not self.stream_thread or not self.stream_thread.is_alive():
+                logger.warning("Stream worker exited unexpectedly, starting a new worker")
+                self.mark_progress()
+                self.start_stream_worker()
+
+            time.sleep(1)
                 
 def parse_arguments():
     """Parse command line arguments."""
